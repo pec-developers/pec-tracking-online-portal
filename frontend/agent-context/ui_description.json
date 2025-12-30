@@ -1,0 +1,256 @@
+{
+  "appName": "PECTOP",
+  "globalStyles": {
+    "componentLibrary": "Shadcn/ui",
+    "cssFramework": "Tailwind CSS",
+    "primaryColor": "#a61612",
+    "themeSupport": ["light", "dark"]
+  },
+  "pwaConfig": {
+    "short_name": "PECTOP",
+    "name": "PECTOP (PEC Tracking Online Portal)",
+    "description": "Student Mentoring Application for PEC",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#a61612",
+    "icons": [
+      {
+        "src": "/icons/icon-72x72.png",
+        "sizes": "72x72",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-96x96.png",
+        "sizes": "96x96",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-128x128.png",
+        "sizes": "128x128",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-144x144.png",
+        "sizes": "144x144",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ],
+    "splashScreen": {
+      "backgroundColor": "#1a202c",
+      "iconSrc": "/icons/splash-icon.png",
+      "text": "PECTOP"
+    }
+  },
+  "commonLayout": {
+    "description": "A consistent master layout for all authenticated users, including a persistent Header and a collapsible Sidebar.",
+    "header": {
+      "componentType": "Header",
+      "description": "A sticky header bar at the top of the viewport.",
+      "children": [
+        {
+          "componentType": "Static",
+          "description": "Application Logo and Name",
+          "properties": {
+            "logoUrl": "/assets/pec_logo.png",
+            "text": "PECTOP",
+            "position": "left"
+          }
+        },
+        {
+          "componentType": "DropdownMenu",
+          "trigger": {
+            "componentType": "Avatar",
+            "description": "User Avatar"
+          },
+          "properties": {
+            "position": "right"
+          },
+          "children": [
+            {
+              "componentType": "DropdownMenuItem",
+              "properties": {
+                "interactive": false,
+                "text": "Displays user's Full Name and Role"
+              }
+            },
+            {
+              "componentType": "DropdownMenuSeparator"
+            },
+            {
+              "componentType": "DropdownMenuItem",
+              "properties": {
+                "text": "Logout",
+                "action": "logoutAndRedirect",
+                "target": "/"
+              }
+            }
+          ]
+        }
+      ],
+      "responsiveBehavior": {
+        "desktop": "Displays full application name, logo, and user avatar.",
+        "tablet": "Similar to desktop, name may be truncated on smaller sizes.",
+        "mobile": "Application name is hidden or shortened. A 'hamburger' menu icon appears on the far left to toggle the sidebar."
+      }
+    },
+    "sidebar": {
+      "componentType": "Sidebar",
+      "description": "A collapsible navigation sidebar with dynamic links based on user role.",
+      "children": [
+        {
+          "componentType": "NavigationMenu",
+          "properties": {
+            "orientation": "vertical",
+            "links": {
+              "Administrator": ["Dashboard", "User Management", "Student Management", "Mentor Assignment", "Academic Management"],
+              "HOD": ["Dashboard", "Department Students", "Mentor Activities", "Reports"],
+              "Mentor": ["Dashboard", "My Profile"],
+              "Student": [
+                "My Profile",
+                "Faculty Contacts"
+              ],
+              "Parent": [
+                "My Profile",
+                "Faculty Contacts"
+              ]
+            }
+          }
+        }
+      ],
+      "responsiveBehavior": {
+        "desktop": "Visible by default in expanded state, with a toggle to collapse to icon-only view.",
+        "tablet_landscape": "Behaves like desktop, likely starting collapsed.",
+        "tablet_portrait_mobile": "Hidden by default. Appears as an overlay sliding from the left, triggered by the 'hamburger' icon."
+      }
+    }
+  },
+  "responsivePatterns": {
+    "patternA": {
+      "name": "Standard Data Table to Card List",
+      "useCase": "Displaying lists of items like users, students, etc.",
+      "desktop": "Renders as a standard Table with multiple columns and rows.",
+      "mobile": "Transforms into a vertical list of Card components. Each card represents a row, displaying data as Label-value pairs."
+    },
+    "patternB": {
+      "name": "Two-Column Form Table to Card List",
+      "useCase": "Simple input tables with a label and a single input/control per row.",
+      "desktop": "Renders as a two-column Table (Label, Input).",
+      "mobile": "Transforms into a list of Cards. Each card has a CardTitle (the label) and the input control placed vertically below it."
+    },
+    "patternC": {
+      "name": "Multi-Column Form Table to Card List",
+      "useCase": "Complex tables with multiple dynamic columns (e.g., ratings per subject).",
+      "desktop": "Renders as a full multi-column Table.",
+      "mobile": "Transforms into a list of Cards, where each card represents one row metric. Inside, a vertical list displays each column header paired with its input control."
+    }
+  },
+  "pages": [
+    {
+      "name": "Role Selection Page",
+      "path": "/",
+      "description": "Initial landing page for role selection. If a user is already logged in, they should be automatically redirected to their respective dashboard.",
+      "components": [
+        {
+          "componentType": "WelcomeHeader",
+          "properties": {
+            "title": "Welcome to PECTOP",
+            "subtitle": "PEC Tracking Online Portal"
+          },
+          "description": "A prominent welcome message at the top of the page."
+        },
+        {
+          "componentType": "Grid",
+          "children": [
+            {
+              "componentType": "Card",
+              "properties": {
+                "title": "Student Login",
+                "navigationTarget": "/login/student"
+              }
+            },
+            {
+              "componentType": "Card",
+              "properties": {
+                "title": "Parent Login",
+                "navigationTarget": "/login/parent"
+              }
+            },
+            {
+              "componentType": "Card",
+              "properties": {
+                "title": "Faculty Login",
+                "navigationTarget": "/login/faculty"
+              }
+            },
+            {
+              "componentType": "Card",
+              "properties": {
+                "title": "HoD Login",
+                "navigationTarget": "/login/faculty"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Login Page",
+      "path": "/login/:role",
+      "description": "A centered card for user authentication.",
+      "components": [
+        {
+          "componentType": "Card",
+          "children": [
+            {
+              "componentType": "CardHeader",
+              "properties": {
+                "title": "Dynamic based on role (e.g., 'Student Login')"
+              }
+            },
+            {
+              "componentType": "CardContent",
+              "children": [
+                {
+                  "componentType": "Input",
+                  "properties": {
+                    "label": "Username / Register Number"
+                  }
+                },
+                {
+                  "componentType": "Input",
+                  "properties": {
+                    "label": "Password",
+                    "type": "password"
+                  }
+                }
+              ]
+            },
+            {
+              "componentType": "CardFooter",
+              "children": [
+                {
+                  "componentType": "Button",
+                  "properties": {
+                    "text": "Login"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
