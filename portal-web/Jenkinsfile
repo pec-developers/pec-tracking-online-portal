@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Portal Web Pipeline') {
+            when {
+                changeset "portal-web/**"
+            }
+
+            stages {
+                stage('Build') {
+                    agent {
+                        docker { 
+                            image 'node:22-alpine' 
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        dir('portal-web') {
+                            sh 'npm install && npm run build'
+                        }
+                    }
+                }
+
+                stage('Test') {
+                    agent {
+                        docker { 
+                            image 'node:22-alpine' 
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        dir('portal-web') {
+                            sh 'npm run test'
+                        }
+                    }
+                }
+
+                stage('Deploy') {
+                    steps {
+                        dir('portal-web') {
+                            sh 'echo "Deploying application..."'
+                            // Add deployment commands here
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

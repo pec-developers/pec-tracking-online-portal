@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            when {
+                changeset "identity-service/**"
+            }
+            
+            steps {
+                dir('identity-service') {
+                    sh 'echo "Building identity-service"'
+                }
+            }
+        }
+    }
+}
