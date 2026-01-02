@@ -4,7 +4,10 @@ pipeline {
     stages {
         stage('Portal Web Pipeline') {
             when {
-                changeset "portal-web/**"
+                anyOf {
+                    changeset "portal-web/**"
+                    triggeredBy 'UserIdCause'
+                }
             }
 
             stages {
@@ -37,10 +40,20 @@ pipeline {
                 }
 
                 stage('Deploy') {
+                    agent {
+                        docker { 
+                            image 'amazon/aws-cli' 
+                            args '--entrypoint=""' // Override entrypoint so Jenkins can run sh commands
+                            reuseNode true
+                        }
+                    }
                     steps {
-                        dir('portal-web') {
-                            sh 'echo "Deploying application..."'
-                            // Add deployment commands here
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                            dir('portal-web') {
+                                sh 'echo "Deploying application..."'
+                                sh "aws s3 sync dist s3://${AWS_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                sh "aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths '/*' --region ${AWS_REGION}"
+                            }
                         }
                     }
                 }
