@@ -4,9 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs'
 
-const app = process.env.VITE_APP || 'login'
+const app = process.env.VITE_APP || 'landing'
 
 const portMap: Record<string, number> = {
+  landing: 3000,
   login: 3001,
   student: 3002,
   parent: 3003,

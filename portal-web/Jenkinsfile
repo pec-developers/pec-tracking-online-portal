@@ -39,6 +39,32 @@ pipeline {
                     }
                 }
 
+                stage('Detect Changes') {
+                    steps {
+                        script {
+                            def changedFiles = sh(
+                                script: "git diff --name-only HEAD~1 -- portal-web/ || echo 'portal-web/'",
+                                returnStdout: true
+                            ).trim()
+
+                            // Shared code or config changes affect all apps
+                            def deployAll = changedFiles.contains('portal-web/src/shared/') ||
+                                            changedFiles.contains('portal-web/vite.config.ts') ||
+                                            changedFiles.contains('portal-web/package.json') ||
+                                            changedFiles.contains('portal-web/.env') ||
+                                            changedFiles.contains('portal-web/tsconfig')
+
+                            env.DEPLOY_LANDING = (deployAll || changedFiles.contains('portal-web/src/landing/') || changedFiles.contains('portal-web/landing.html')) ? 'true' : 'false'
+                            env.DEPLOY_LOGIN   = (deployAll || changedFiles.contains('portal-web/src/login/')   || changedFiles.contains('portal-web/login.html'))   ? 'true' : 'false'
+                            env.DEPLOY_STUDENT = (deployAll || changedFiles.contains('portal-web/src/student/') || changedFiles.contains('portal-web/student.html')) ? 'true' : 'false'
+                            env.DEPLOY_PARENT  = (deployAll || changedFiles.contains('portal-web/src/parent/')  || changedFiles.contains('portal-web/parent.html'))  ? 'true' : 'false'
+                            env.DEPLOY_FACULTY = (deployAll || changedFiles.contains('portal-web/src/faculty/') || changedFiles.contains('portal-web/faculty.html')) ? 'true' : 'false'
+
+                            echo "Deploy flags => landing:${env.DEPLOY_LANDING} login:${env.DEPLOY_LOGIN} student:${env.DEPLOY_STUDENT} parent:${env.DEPLOY_PARENT} faculty:${env.DEPLOY_FACULTY}"
+                        }
+                    }
+                }
+
                 stage('Deploy') {
                     agent {
                         docker { 
@@ -50,24 +76,46 @@ pipeline {
                     steps {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             dir('portal-web') {
-                                parallel(
-                                    'Deploy Login': {
-                                        sh "aws s3 sync dist/login s3://${LOGIN_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
-                                        sh "aws cloudfront create-invalidation --distribution-id ${LOGIN_CF_ID} --paths '/*' --region ${AWS_REGION}"
-                                    },
-                                    'Deploy Student': {
-                                        sh "aws s3 sync dist/student s3://${STUDENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
-                                        sh "aws cloudfront create-invalidation --distribution-id ${STUDENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
-                                    },
-                                    'Deploy Parent': {
-                                        sh "aws s3 sync dist/parent s3://${PARENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
-                                        sh "aws cloudfront create-invalidation --distribution-id ${PARENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
-                                    },
-                                    'Deploy Faculty': {
-                                        sh "aws s3 sync dist/faculty s3://${FACULTY_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
-                                        sh "aws cloudfront create-invalidation --distribution-id ${FACULTY_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                script {
+                                    def deploySteps = [:]
+
+                                    if (env.DEPLOY_LANDING == 'true') {
+                                        deploySteps['Deploy Landing'] = {
+                                            sh "aws s3 sync dist/landing s3://${LANDING_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                            sh "aws cloudfront create-invalidation --distribution-id ${LANDING_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                        }
                                     }
-                                )
+                                    if (env.DEPLOY_LOGIN == 'true') {
+                                        deploySteps['Deploy Login'] = {
+                                            sh "aws s3 sync dist/login s3://${LOGIN_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                            sh "aws cloudfront create-invalidation --distribution-id ${LOGIN_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                        }
+                                    }
+                                    if (env.DEPLOY_STUDENT == 'true') {
+                                        deploySteps['Deploy Student'] = {
+                                            sh "aws s3 sync dist/student s3://${STUDENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                            sh "aws cloudfront create-invalidation --distribution-id ${STUDENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                        }
+                                    }
+                                    if (env.DEPLOY_PARENT == 'true') {
+                                        deploySteps['Deploy Parent'] = {
+                                            sh "aws s3 sync dist/parent s3://${PARENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                            sh "aws cloudfront create-invalidation --distribution-id ${PARENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                        }
+                                    }
+                                    if (env.DEPLOY_FACULTY == 'true') {
+                                        deploySteps['Deploy Faculty'] = {
+                                            sh "aws s3 sync dist/faculty s3://${FACULTY_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                            sh "aws cloudfront create-invalidation --distribution-id ${FACULTY_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                        }
+                                    }
+
+                                    if (deploySteps.size() > 0) {
+                                        parallel deploySteps
+                                    } else {
+                                        echo 'No app changes detected — skipping deploy.'
+                                    }
+                                }
                             }
                         }
                     }
