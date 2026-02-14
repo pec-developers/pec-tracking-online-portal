@@ -50,9 +50,24 @@ pipeline {
                     steps {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             dir('portal-web') {
-                                sh 'echo "Deploying application..."'
-                                sh "aws s3 sync dist s3://${AWS_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
-                                sh "aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths '/*' --region ${AWS_REGION}"
+                                parallel(
+                                    'Deploy Login': {
+                                        sh "aws s3 sync dist/login s3://${LOGIN_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                        sh "aws cloudfront create-invalidation --distribution-id ${LOGIN_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                    },
+                                    'Deploy Student': {
+                                        sh "aws s3 sync dist/student s3://${STUDENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                        sh "aws cloudfront create-invalidation --distribution-id ${STUDENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                    },
+                                    'Deploy Parent': {
+                                        sh "aws s3 sync dist/parent s3://${PARENT_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                        sh "aws cloudfront create-invalidation --distribution-id ${PARENT_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                    },
+                                    'Deploy Faculty': {
+                                        sh "aws s3 sync dist/faculty s3://${FACULTY_S3_BUCKET} --delete --region ${AWS_REGION} --no-progress"
+                                        sh "aws cloudfront create-invalidation --distribution-id ${FACULTY_CF_ID} --paths '/*' --region ${AWS_REGION}"
+                                    }
+                                )
                             }
                         }
                     }

@@ -4,15 +4,30 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",  
+    "dev": "concurrently -n login,student,parent,faculty -c blue,green,yellow,magenta \"npm run dev:login\" \"npm run dev:student\" \"npm run dev:parent\" \"npm run dev:faculty\"",
+    "dev:login": "cross-env VITE_APP=login vite",
+    "dev:student": "cross-env VITE_APP=student vite",
+    "dev:parent": "cross-env VITE_APP=parent vite",
+    "dev:faculty": "cross-env VITE_APP=faculty vite",
     "test": "echo 'Running tests ...'",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && npm run build:login && npm run build:student && npm run build:parent && npm run build:faculty",
+    "build:login": "cross-env VITE_APP=login vite build",
+    "build:student": "cross-env VITE_APP=student vite build",
+    "build:parent": "cross-env VITE_APP=parent vite build",
+    "build:faculty": "cross-env VITE_APP=faculty vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tailwindcss/vite": "^4.1.18",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.564.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -20,6 +35,8 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
