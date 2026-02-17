@@ -1,3 +1,76 @@
+eureka:
+  client:
+    service-url.defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions: INFO
+
+server:
+  port: 8080
+
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            # Student General Profile Service
+            # both Student and Faculty
+            - id: get-student-general-profile
+              uri: lb://student-general-profile-service
+              predicates:
+                - Path=/api/student/general-profile/**
+                - Method=GET
+              filters:
+                - StripPrefix=2
+            
+            # Student General Profile Service
+            # only Faculty
+            - id: modify-student-general-profile
+              uri: lb://student-general-profile-service
+              predicates:
+                - Path=/api/student/general-profile/**
+                - Method=PUT
+              filters:
+                - StripPrefix=2
+
+            # Student General Profile Service
+            # only Faculty (temp - use Student Registration Service later)
+            - id: create-student-general-profile
+              uri: lb://student-general-profile-service
+              predicates:
+                - Path=/api/student
+                - Method=POST
+              filters:
+                - StripPrefix=2
+                - SetPath=/general-profile
+            
+            # Student Registration Service
+            # Orchestrates creation of new students (Need to learn RabbitMQ & Kafka)
+#            - id: student-registration
+#              uri: lb://student-registration-service
+#              predicates:
+#                - Path=/api/student/register
+#                - Method=POST
+
+            # Discovery Server
+            - id: discovery-server
+              uri: http://localhost:8761
+              predicates:
+                - Path=/eureka/web
+              filters:
+                - StripPrefix=2
+
+            # Discovery Server Static Assets
+            - id: discovery-server-static-assets
+              uri: http://localhost:8761
+              predicates:
+                - Path=/eureka/**
