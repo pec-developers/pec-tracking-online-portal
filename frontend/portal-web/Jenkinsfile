@@ -5,7 +5,7 @@ pipeline {
         stage('Portal Web Pipeline') {
             when {
                 anyOf {
-                    changeset "portal-web/**"
+                    changeset "frontend/portal-web/**"
                     triggeredBy 'UserIdCause'
                 }
             }
@@ -43,22 +43,22 @@ pipeline {
                     steps {
                         script {
                             def changedFiles = sh(
-                                script: "git diff --name-only HEAD~1 -- portal-web/ || echo 'portal-web/'",
+                                script: "git diff --name-only HEAD~1 -- frontend/portal-web/ || echo 'frontend/portal-web/'",
                                 returnStdout: true
                             ).trim()
 
                             // Shared code or config changes affect all apps
-                            def deployAll = changedFiles.contains('portal-web/src/shared/') ||
-                                            changedFiles.contains('portal-web/vite.config.ts') ||
-                                            changedFiles.contains('portal-web/package.json') ||
-                                            changedFiles.contains('portal-web/.env') ||
-                                            changedFiles.contains('portal-web/tsconfig')
+                            def deployAll = changedFiles.contains('frontend/portal-web/src/shared/') ||
+                                            changedFiles.contains('frontend/portal-web/vite.config.ts') ||
+                                            changedFiles.contains('frontend/portal-web/package.json') ||
+                                            changedFiles.contains('frontend/portal-web/.env') ||
+                                            changedFiles.contains('frontend/portal-web/tsconfig')
 
-                            env.DEPLOY_LANDING = (deployAll || changedFiles.contains('portal-web/src/landing/') || changedFiles.contains('portal-web/landing.html')) ? 'true' : 'false'
-                            env.DEPLOY_LOGIN   = (deployAll || changedFiles.contains('portal-web/src/login/')   || changedFiles.contains('portal-web/login.html'))   ? 'true' : 'false'
-                            env.DEPLOY_STUDENT = (deployAll || changedFiles.contains('portal-web/src/student/') || changedFiles.contains('portal-web/student.html')) ? 'true' : 'false'
-                            env.DEPLOY_PARENT  = (deployAll || changedFiles.contains('portal-web/src/parent/')  || changedFiles.contains('portal-web/parent.html'))  ? 'true' : 'false'
-                            env.DEPLOY_FACULTY = (deployAll || changedFiles.contains('portal-web/src/faculty/') || changedFiles.contains('portal-web/faculty.html')) ? 'true' : 'false'
+                            env.DEPLOY_LANDING = (deployAll || changedFiles.contains('frontend/portal-web/src/landing/') || changedFiles.contains('frontend/portal-web/landing.html')) ? 'true' : 'false'
+                            env.DEPLOY_LOGIN   = (deployAll || changedFiles.contains('frontend/portal-web/src/login/')   || changedFiles.contains('frontend/portal-web/login.html'))   ? 'true' : 'false'
+                            env.DEPLOY_STUDENT = (deployAll || changedFiles.contains('frontend/portal-web/src/student/') || changedFiles.contains('frontend/portal-web/student.html')) ? 'true' : 'false'
+                            env.DEPLOY_PARENT  = (deployAll || changedFiles.contains('frontend/portal-web/src/parent/')  || changedFiles.contains('frontend/portal-web/parent.html'))  ? 'true' : 'false'
+                            env.DEPLOY_FACULTY = (deployAll || changedFiles.contains('frontend/portal-web/src/faculty/') || changedFiles.contains('frontend/portal-web/faculty.html')) ? 'true' : 'false'
 
                             echo "Deploy flags => landing:${env.DEPLOY_LANDING} login:${env.DEPLOY_LOGIN} student:${env.DEPLOY_STUDENT} parent:${env.DEPLOY_PARENT} faculty:${env.DEPLOY_FACULTY}"
                         }

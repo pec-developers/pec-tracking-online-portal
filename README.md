@@ -1,5 +1,20 @@
 # PEC Tracking Online Portal
 
+## Repository Structure
+
+```
+├── frontend/          → Web application (Vite + React)
+│   └── portal-web/
+├── backend/           → Spring Boot microservices (Maven multi-module)
+│   ├── api-gateway/
+│   ├── discovery-server/
+│   ├── student-general-profile-service/
+│   └── pom.xml
+├── docs/              → Project documentation & design files
+├── infrastructure/    → Docker Compose, IaC configs
+└── README.md
+```
+
 ## Architecture
 
 ```mermaid
@@ -34,3 +49,35 @@ architecture-beta
     jenkins:L --> R:s3
     jenkins:B --> R:ecr
 ```
+
+## Tech Stack
+
+### Frontend
+- **Framework**: React 19
+- **Build Tool**: Vite
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn UI
+- **State Management**: TanStack Query (React Query)
+- **Routing**: React Router
+- **Testing**: Vitest, React Testing Library
+
+### Backend
+- **Framework**: Spring Boot 3
+- **Language**: Java 21
+- **Build Tool**: Maven
+- **Database**: PostgreSQL
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes (EKS)
+- **API Gateway**: Spring Cloud Gateway
+- **Service Discovery**: Spring Cloud Netflix Eureka
+- **Testing**: Spring Boot Test, Testcontainers
+
+### Infrastructure
+- **Cloud Provider**: AWS
+- **Container Registry**: Amazon ECR
+- **Compute**: Amazon EKS (Elastic Kubernetes Service)
+- **Storage**: Amazon S3
+- **CDN**: Amazon CloudFront
+- **DNS**: Amazon Route 53
+- **CI/CD**: Jenkins
