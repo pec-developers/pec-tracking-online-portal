@@ -38,10 +38,13 @@ public class StudentAcademicHistory {
         @AttributeOverride(name = "schoolName", column = @Column(name = "sslc_school_name")),
         @AttributeOverride(name = "board", column = @Column(name = "sslc_board")),
         @AttributeOverride(name = "medium", column = @Column(name = "sslc_medium")),
-        @AttributeOverride(name = "scoredMark", column = @Column(name = "sslc_scored_mark")),
-        @AttributeOverride(name = "totalMark", column = @Column(name = "sslc_total_mark"))
+        @AttributeOverride(name = "mathMark", column = @Column(name = "sslc_math_mark")),
+        @AttributeOverride(name = "phyMark", column = @Column(name = "sslc_phy_mark")),
+        @AttributeOverride(name = "chemMark", column = @Column(name = "sslc_chem_mark")),
+        @AttributeOverride(name = "csBioMark", column = @Column(name = "sslc_cs_bio_mark")),
+        @AttributeOverride(name = "cutoffMark", column = @Column(name = "sslc_cutoff_mark"))
     })
-    private SchoolingDetails sslcInterDetails;
+    private SslcInterDetails sslcInterDetails;
 
     @Embedded
     @AttributeOverrides({

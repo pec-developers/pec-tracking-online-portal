@@ -5,13 +5,14 @@ import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.InitialStude
 import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.StudentPublicProfileRequest;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.StudentPublicProfileResponse;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.mapper.StudentPublicProfileMapper;
-import org.prathyushacampus.pectop.studentgeneralprofileservice.model.StudentAcademicDetails;
-import org.prathyushacampus.pectop.studentgeneralprofileservice.model.StudentPublicProfile;
+import org.prathyushacampus.pectop.studentgeneralprofileservice.model.*;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.repository.StudentPublicProfileRepository;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional
@@ -40,14 +41,16 @@ public class StudentProfileService {
     @Transactional(readOnly = true)
     public StudentPublicProfileResponse getStudentPublicProfile(String studentId) {
         StudentPublicProfile studentPublicProfile = studentPublicProfileRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new RuntimeException("Student Public Profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
+
         return studentPublicProfileMapper.mapToResponse(studentPublicProfile);
     }
 
     public StudentPublicProfileResponse modifyStudentPublicProfile(String studentId, StudentPublicProfileRequest request) {
         StudentPublicProfile studentPublicProfile = studentPublicProfileRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new RuntimeException("Student Public Profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
 
+        clearHostelFieldsIfNotHostel(studentPublicProfile, request);
         deepCopyNonNullProperties(request, studentPublicProfile);
 
         StudentPublicProfile savedProfile = studentPublicProfileRepository.save(studentPublicProfile);
@@ -86,5 +89,28 @@ public class StudentProfileService {
 
     private boolean isEmbeddable(Class<?> clazz) {
         return clazz.isAnnotationPresent(jakarta.persistence.Embeddable.class);
+    }
+
+    private void clearHostelFieldsIfNotHostel(StudentPublicProfile profile, StudentPublicProfileRequest request) {
+        if (request.getAmbitionDetails() == null || request.getAmbitionDetails().getLivingStyle() == null) {
+            return;
+        }
+
+        LivingStyle incomingLivingStyle = request.getAmbitionDetails().getLivingStyle();
+
+        // Determine current stay type from either the incoming request or the existing
+        // profile
+        StayType currentStayType = null;
+        if (request.getAddressDetails() != null) {
+            currentStayType = request.getAddressDetails().getStudentPresentStayType();
+        }
+        if (currentStayType == null && profile.getAddressDetails() != null) {
+            currentStayType = profile.getAddressDetails().getStudentPresentStayType();
+        }
+
+        if (currentStayType != StayType.HOSTEL) {
+            incomingLivingStyle.setRoommatesDescription(null);
+            incomingLivingStyle.setHostelEnvironmentDescription(null);
+        }
     }
 }

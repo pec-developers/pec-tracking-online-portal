@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LocalGuardian {
     private String name;
-    private Long contactNumber;
+    private String contactNumber;
     private String address;
 }

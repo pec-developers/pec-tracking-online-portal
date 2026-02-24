@@ -1,6 +1,7 @@
 package org.prathyushacampus.pectop.studentgeneralprofileservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,8 @@ public class StudentAcademicDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonIgnore
     private Long id;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String imageUrl;
     private String name;
     @Column(unique = true)
     private String registerNumber;

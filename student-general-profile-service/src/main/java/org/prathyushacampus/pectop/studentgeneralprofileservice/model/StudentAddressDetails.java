@@ -36,4 +36,14 @@ public class StudentAddressDetails {
         // Assuming the last element in the list is the most recent
         return stayDetails.getLast().getAddress();
     }
+
+    @Transient
+    public StayType getStudentPresentStayType() {
+        if (stayDetails == null || stayDetails.isEmpty()) {
+            return null;
+        }
+
+        // Assuming the last element in the list is the most recent
+        return stayDetails.getLast().getStayType();
+    }
 }

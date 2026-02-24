@@ -1,13 +1,11 @@
 package org.prathyushacampus.pectop.studentgeneralprofileservice.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.Set;
 
 @Embeddable
 @Data
@@ -20,8 +18,11 @@ public class CareerPlan {
         HIGHER_STUDIES, JOB, ENTREPRENEUR
     }
 
+    @ElementCollection(targetClass = CareerChoice.class)
     @Enumerated(EnumType.STRING)
-    private CareerChoice careerChoice;
+    @CollectionTable(name = "student_career_choices", joinColumns = @JoinColumn(name = "student_ambition_id"))
+    @Column(name = "career_choice")
+    private Set<CareerChoice> careerChoices;
 
     @Column(columnDefinition = "TEXT")
     private String careerPrepPlan;
