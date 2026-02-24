@@ -7,6 +7,7 @@ import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.StudentPubli
 import org.prathyushacampus.pectop.studentgeneralprofileservice.service.StudentProfileService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/general-profile")
@@ -29,7 +30,29 @@ public class StudentProfileController {
 
     @PutMapping("/{studentId}")
     @ResponseStatus(HttpStatus.OK)
-    public StudentPublicProfileResponse modifyStudentPublicProfile(@PathVariable String studentId, @RequestBody StudentPublicProfileRequest request) {
+    public StudentPublicProfileResponse modifyStudentPublicProfile(@PathVariable String studentId,
+            @RequestBody StudentPublicProfileRequest request) {
         return studentProfileService.modifyStudentPublicProfile(studentId, request);
+    }
+
+    @PutMapping("/{studentId}/father-image")
+    @ResponseStatus(HttpStatus.OK)
+    public StudentPublicProfileResponse uploadFatherImage(@PathVariable String studentId,
+            @RequestParam("image") MultipartFile file) {
+        return studentProfileService.uploadFatherImage(studentId, file);
+    }
+
+    @PutMapping("/{studentId}/mother-image")
+    @ResponseStatus(HttpStatus.OK)
+    public StudentPublicProfileResponse uploadMotherImage(@PathVariable String studentId,
+            @RequestParam("image") MultipartFile file) {
+        return studentProfileService.uploadMotherImage(studentId, file);
+    }
+
+    @PutMapping("/{studentId}/self-image")
+    @ResponseStatus(HttpStatus.OK)
+    public StudentPublicProfileResponse uploadSelfImage(@PathVariable String studentId,
+            @RequestParam("image") MultipartFile file) {
+        return studentProfileService.uploadSelfImage(studentId, file);
     }
 }

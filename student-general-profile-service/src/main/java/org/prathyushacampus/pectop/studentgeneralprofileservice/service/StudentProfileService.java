@@ -12,6 +12,7 @@ import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -21,6 +22,7 @@ public class StudentProfileService {
 
     private final StudentPublicProfileRepository studentPublicProfileRepository;
     private final StudentPublicProfileMapper studentPublicProfileMapper;
+    private final S3StorageService s3StorageService;
 
     public StudentPublicProfileResponse addNewStudentPublicProfile(InitialStudentProfileRequest request) {
         StudentAcademicDetails academicDetails = StudentAcademicDetails.builder()
@@ -40,15 +42,13 @@ public class StudentProfileService {
 
     @Transactional(readOnly = true)
     public StudentPublicProfileResponse getStudentPublicProfile(String studentId) {
-        StudentPublicProfile studentPublicProfile = studentPublicProfileRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
-
+        StudentPublicProfile studentPublicProfile = findProfileByStudentId(studentId);
         return studentPublicProfileMapper.mapToResponse(studentPublicProfile);
     }
 
-    public StudentPublicProfileResponse modifyStudentPublicProfile(String studentId, StudentPublicProfileRequest request) {
-        StudentPublicProfile studentPublicProfile = studentPublicProfileRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
+    public StudentPublicProfileResponse modifyStudentPublicProfile(String studentId,
+            StudentPublicProfileRequest request) {
+        StudentPublicProfile studentPublicProfile = findProfileByStudentId(studentId);
 
         clearHostelFieldsIfNotHostel(studentPublicProfile, request);
         deepCopyNonNullProperties(request, studentPublicProfile);
@@ -57,18 +57,75 @@ public class StudentProfileService {
         return studentPublicProfileMapper.mapToResponse(savedProfile);
     }
 
+    public StudentPublicProfileResponse uploadFatherImage(String studentId, MultipartFile file) {
+        StudentPublicProfile profile = findProfileByStudentId(studentId);
+
+        String imageUrl = s3StorageService.uploadImage(studentId, "father", file);
+
+        if (profile.getFamilyDetails() == null) {
+            profile.setFamilyDetails(new StudentFamilyDetails());
+        }
+        if (profile.getFamilyDetails().getFather() == null) {
+            profile.getFamilyDetails().setFather(new ParentDetails());
+        }
+        profile.getFamilyDetails().getFather().setImageUrl(imageUrl);
+
+        StudentPublicProfile savedProfile = studentPublicProfileRepository.save(profile);
+        return studentPublicProfileMapper.mapToResponse(savedProfile);
+    }
+
+    public StudentPublicProfileResponse uploadMotherImage(String studentId, MultipartFile file) {
+        StudentPublicProfile profile = findProfileByStudentId(studentId);
+
+        String imageUrl = s3StorageService.uploadImage(studentId, "mother", file);
+
+        if (profile.getFamilyDetails() == null) {
+            profile.setFamilyDetails(new StudentFamilyDetails());
+        }
+        if (profile.getFamilyDetails().getMother() == null) {
+            profile.getFamilyDetails().setMother(new ParentDetails());
+        }
+        profile.getFamilyDetails().getMother().setImageUrl(imageUrl);
+
+        StudentPublicProfile savedProfile = studentPublicProfileRepository.save(profile);
+        return studentPublicProfileMapper.mapToResponse(savedProfile);
+    }
+
+    public StudentPublicProfileResponse uploadSelfImage(String studentId, MultipartFile file) {
+        StudentPublicProfile profile = findProfileByStudentId(studentId);
+
+        String imageUrl = s3StorageService.uploadImage(studentId, "self", file);
+
+        if (profile.getAcademicDetails() == null) {
+            profile.setAcademicDetails(new StudentAcademicDetails());
+        }
+        profile.getAcademicDetails().setImageUrl(imageUrl);
+
+        StudentPublicProfile savedProfile = studentPublicProfileRepository.save(profile);
+        return studentPublicProfileMapper.mapToResponse(savedProfile);
+    }
+
+    private StudentPublicProfile findProfileByStudentId(String studentId) {
+        return studentPublicProfileRepository.findByStudentId(studentId)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
+    }
+
     private void deepCopyNonNullProperties(Object source, Object target) {
-        if (source == null || target == null) return;
+        if (source == null || target == null)
+            return;
 
         BeanWrapper srcWrap = new BeanWrapperImpl(source);
         BeanWrapper trgWrap = new BeanWrapperImpl(target);
 
         for (java.beans.PropertyDescriptor pd : srcWrap.getPropertyDescriptors()) {
             String propertyName = pd.getName();
-            if ("class".equals(propertyName) || "id".equals(propertyName)) continue;
+            if ("class".equals(propertyName) || "id".equals(propertyName))
+                continue;
 
             Object srcValue = srcWrap.getPropertyValue(propertyName);
-            if (srcValue == null) continue;
+            if (srcValue == null)
+                continue;
 
             if (trgWrap.isWritableProperty(propertyName)) {
                 Object trgValue = trgWrap.getPropertyValue(propertyName);
@@ -84,7 +141,8 @@ public class StudentProfileService {
     }
 
     private boolean isModelClass(Class<?> clazz) {
-        return clazz.getName().startsWith("org.prathyushacampus.pectop.studentgeneralprofileservice.model") && !clazz.isEnum();
+        return clazz.getName().startsWith("org.prathyushacampus.pectop.studentgeneralprofileservice.model")
+                && !clazz.isEnum();
     }
 
     private boolean isEmbeddable(Class<?> clazz) {
