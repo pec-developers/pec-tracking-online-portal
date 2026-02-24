@@ -4,7 +4,13 @@
 
 ```
 ├── frontend/          → Web application (Vite + React)
-│   └── portal-web/
+│   └── src/
+│       ├── landing/   → Public marketing page
+│       ├── login/     → Role-based login portal
+│       ├── student/   → Student dashboard
+│       ├── parent/    → Parent dashboard
+│       ├── faculty/   → Faculty dashboard
+│       └── shared/    → Common components, hooks, styles & store
 ├── backend/           → Spring Boot microservices (Maven multi-module)
 │   ├── api-gateway/
 │   ├── discovery-server/
@@ -58,7 +64,7 @@ architecture-beta
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **UI Components**: Shadcn UI
-- **State Management**: TanStack Query (React Query)
+- **State Management**: Redux Toolkit + RTK Query
 - **Routing**: React Router
 - **Testing**: Vitest, React Testing Library
 
