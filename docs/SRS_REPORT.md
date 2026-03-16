@@ -66,10 +66,26 @@ The key functions of PECTOP are:
 
 The application will be a web-based platform accessible through modern web browsers (e.g., Chrome, Firefox, Safari, Edge). The technology stack is as follows:
 
-- **Frontend:** **React.js Progressive Web App (PWA)** with Zod for form validation. Styling will be implemented using **Tailwind CSS** and the **Shadcn/ui** component library.
-- **Backend:** Spring Boot (Java).
-- **Database:** Supabase with PostgreSQL for database hosting and management.
-- **Hosting:** The frontend will be hosted on **AWS S3** and distributed via **AWS CloudFront**. The backend application will be hosted on an **AWS EC2** instance.
+- **Frontend:** The frontend is a **multi-app React.js PWA** built with **Vite**, **Tailwind CSS**, and the **Shadcn/ui** component library. It is split into **5 independently deployed applications**, each targeting a specific user role:
+  - `landing` — Public-facing marketing/info page (port 3000 in dev)
+  - `login` — Shared authentication/login entry point (port 3001)
+  - `student` — Student portal (port 3002)
+  - `parent` — Parent/Guardian portal (port 3003)
+  - `faculty` — Faculty/Mentor/Admin portal (port 3004)
+  Each app is built independently via `VITE_APP=<app> vite build`, producing a standalone `dist/<app>/index.html` that is deployed to its **own S3 bucket + CloudFront distribution**, served on its own domain.
+- **Backend:** Spring Boot (Java), deployed as independent **microservices** on **Amazon EKS (Elastic Kubernetes Service)**. Key backend services include:
+  - `student-general-profile-service` — manages pre-college student data and basic student details (PDF pages 2–4).
+  - `student-registration-service` — orchestrates student registration as a Saga.
+  - `student-passout-service` — orchestrates end-of-program (passout) workflows as a Saga.
+- **API Gateway:** **Kong** (DB mode, running on EKS) replaces Spring Cloud Gateway in production. Kong handles routing, JWT validation, ACL-based RBAC, rate limiting, and CORS.
+- **Authentication & Authorization:** **Keycloak** (deployed via Helm on EKS), managing user realms with roles: `student`, `faculty`, `parent`, `principal`, `hod`, `admin`.
+- **Messaging:** **RabbitMQ** (deployed via Helm on EKS), used for event-driven Saga-based student lifecycle orchestration (async flows). Synchronous inter-service calls use **Kubernetes-native service discovery** (CoreDNS) with **Resilience4j** circuit breakers.
+- **Database:** **Amazon RDS PostgreSQL** (managed, HA). A single RDS instance hosts multiple databases: `app`, `keycloak`, `kong`, and `terraform_state`.
+- **Containerization:** Services are containerized using **Google Jib** (Maven plugin), which builds OCI-compliant images and pushes directly to **Amazon ECR** without requiring a Docker daemon.
+- **Hosting:** The 5 frontend apps are each hosted on a dedicated **AWS S3** bucket and distributed via a dedicated **AWS CloudFront** distribution. DNS for all 5 sub-domains is managed by **AWS Route 53**. API traffic is routed via an **AWS ALB Ingress** to the Kong gateway on EKS.
+- **Observability:** **Zipkin** (distributed tracing), **Prometheus** (metrics collection), and **Grafana** (dashboards) are deployed in the `observability` namespace on EKS.
+- **Infrastructure as Code (IaC):** All AWS infrastructure is provisioned and managed using **Terraform** with environment-specific configurations (`dev`, `staging`, `prod`). Kubernetes workloads are managed with **Helm** charts and **Helmfile**. Terraform state is stored in the RDS PostgreSQL instance using the `pg` backend.
+- **CI/CD:** A **Jenkins** pipeline (triggered by GitHub webhooks) handles building images with Jib, pushing to ECR, running Terraform plans, and deploying to EKS via Helm.
 
 ### 2.5 Design and Implementation Constraints
 
@@ -77,6 +93,14 @@ The application will be a web-based platform accessible through modern web brows
 - The system must adhere to data privacy regulations to protect sensitive student information.
 - The user interface should be intuitive and require minimal training for faculty and staff.
 - The application must support offline functionality. Data entered offline must be synchronized with the server once a network connection is re-established.
+- **Microservices Constraint:** Backend services must be stateless and independently deployable. Each service owns its own data. Inter-service communication follows two patterns:
+  - **Asynchronous (Saga/event-driven):** via **RabbitMQ** for operations requiring distributed coordination (e.g., student registration, passout).
+  - **Synchronous (direct service-to-service):** via **Kubernetes-native service discovery** (CoreDNS) for direct REST calls between services within the cluster, protected by **Resilience4j** circuit breakers and retry policies to prevent cascading failures.
+- **Frontend App Isolation:** Each of the 5 frontend apps (`landing`, `login`, `student`, `parent`, `faculty`) is independently built and deployed to its own S3 + CloudFront stack. Inter-app navigation is handled via environment-configured URLs (`VITE_*_URL`).
+- **Containerization Constraint:** All backend services must be containerized as OCI images via Jib and pushed to Amazon ECR. No hand-written Dockerfiles are required.
+- **Service Discovery:** On Kubernetes (EKS), Kubernetes-native DNS (CoreDNS) is used for service discovery. Eureka/Spring Cloud discovery is disabled in the `k8s` Spring profile and is retained only for local development.
+- **Infrastructure Reproducibility:** All AWS infrastructure changes must be managed through Terraform. Direct console changes to production infrastructure are not permitted.
+- **Budget Optimization:** AWS Graviton (ARM) instances (`t4g` family) must be used where supported to take advantage of the AWS Free Tier and cost savings. A single RDS instance with multiple databases is preferred over multiple RDS instances.
 
 ### 3. System Features
 
@@ -147,13 +171,33 @@ As a web-based application, the system will not interface directly with any spec
 
 ### 4.3 Software Interfaces
 
-- **Frontend-Backend Communication:** The React.js frontend will communicate with the Spring Boot backend via a RESTful API. All data exchange will happen through this API.
-- **Database:** The backend application will interface with a PostgreSQL database hosted on Supabase using the Java Database Connectivity (JDBC) API.
+- **Frontend-Backend Communication:** The React.js frontend communicates exclusively with the **Kong API Gateway** via HTTPS RESTful APIs. Kong handles request routing, JWT validation, and ACL enforcement before proxying to the appropriate backend microservice.
+- **Authentication Interface:** All authentication flows use **Keycloak** as the Identity Provider. Kong's OIDC/JWT plugin validates tokens against Keycloak's JWKS endpoint. The frontend initiates the OAuth2/OIDC login flow against the Keycloak realm (`pec-portal`).
+- **API Gateway (Kong) RBAC:** Kong enforces route-level, method-level access control via its ACL plugin. Keycloak roles (`student`, `faculty`, `parent`, `principal`, `hod`, `admin`) are embedded in JWTs and verified per-route.
+
+  | Route | Method | Auth | Allowed Roles |
+  |---|---|---|---|
+  | `/api/student/general-profile/**` | GET | JWT + ACL | student, faculty, principal, hod |
+  | `/api/student/general-profile/**` | PUT | JWT + ACL | faculty |
+  | `/api/student/register` | POST | JWT + ACL | faculty, admin |
+  | `/api/student/passout` | POST | JWT + ACL | faculty, admin, principal |
+  | `/health`, `/actuator/health` | GET | None | Public |
+  | `/api/public/**` | GET | None | Public |
+
+- **Inter-Service Messaging (RabbitMQ):** Asynchronous, event-driven communication between microservices uses **RabbitMQ**. `student-registration-service` and `student-passout-service` act as Saga orchestrators, publishing events that participating services consume and acknowledge.
+- **Database Interface:** Each backend microservice interfaces with its schema in **Amazon RDS PostgreSQL** using JDBC with Spring Data JPA. Connection pooling (HikariCP) is used to manage database connections effectively.
+- **Observability Interfaces:**
+  - Services emit distributed traces to **Zipkin** via the Micrometer Brave bridge.
+  - Services expose a `/actuator/prometheus` endpoint that **Prometheus** scrapes for metrics.
+  - **Grafana** connects to Prometheus as a data source and provides dashboards (Kong, JVM, RabbitMQ).
+- **Container Registry:** Built images are pushed to **Amazon ECR** by Jib during the Jenkins build phase.
 - **Future Integrations:** The system is designed with the potential for future API-based integration with the college's Student Information System (SIS) for data synchronization (e.g., syncing student data from existing systems like NetKampus).
 
 ### 4.4 Communications Interfaces
 
-- All communication between the client (web browser) and the servers (AWS S3/CloudFront and EC2) will be encrypted using HTTPS (HTTP over SSL/TLS) to ensure data confidentiality and integrity.
+- All communication between the client (web browser) and the servers is encrypted using **HTTPS (TLS)**, terminated at the AWS ALB (for API) or AWS CloudFront (for frontend) using **ACM certificates**.
+- The 5 frontend applications are served from 5 separate CloudFront distributions, each mapped to its own sub-domain. Cross-app redirects (e.g., from `landing` to `login`, or `login` to `faculty`) use absolute URLs configured via `VITE_*_URL` environment variables at build time.
+- All inter-service communication within the EKS cluster (service-to-service) uses plain HTTP over the Kubernetes cluster network, as TLS termination is handled at the cluster boundary (ALB → Kong).
 
 ### 5. Non-Functional Requirements
 
@@ -165,9 +209,14 @@ As a web-based application, the system will not interface directly with any spec
 
 ### 5.2 Security
 
-- **Authentication & Authorization:** The system must enforce strict role-based access control (RBAC) to ensure users can only access data and perform actions permitted by their role.
-- **Data Encryption:** All data transmission must be encrypted using SSL/TLS. Passwords must be securely hashed and salted before being stored in the database.
-- **Vulnerability Protection:** The application must be protected against common web vulnerabilities, including but not limited to SQL Injection, Cross-Site Scripting (XSS), and Cross-Site Request Forgery (CSRF).
+- **Authentication & Authorization:** The system enforces strict role-based access control (RBAC) via **Keycloak** as the Identity Provider and **Kong's ACL plugin** at the API Gateway layer. Users can only access data and perform actions permitted by their Keycloak-assigned role (`student`, `faculty`, `parent`, `principal`, `hod`, `admin`).
+- **Token Validation:** Kong validates JWT tokens on every incoming API request against Keycloak's JWKS endpoint. Expired or invalid tokens are rejected at the gateway, before reaching any microservice.
+- **Data Encryption:** All data transmission is encrypted using **HTTPS (TLS)**, terminated at the AWS ALB with **ACM certificates**. Data at rest in Amazon RDS PostgreSQL is encrypted using AWS-managed keys.
+- **Secrets Management:** Application secrets (database passwords, RabbitMQ credentials, etc.) are stored in **AWS Secrets Manager** and synced into Kubernetes secrets via the **External Secrets Operator**. No static credentials are embedded in code or container images.
+- **Pod-Level IAM (IRSA):** AWS IAM roles for S3 access are assigned at the pod level using **IAM Roles for Service Accounts (IRSA)**, eliminating the need for static IAM credentials.
+- **Network Policies:** Kubernetes Network Policies restrict pod-to-pod traffic, ensuring services can only communicate with explicitly authorized peers.
+- **Container Image Scanning:** Amazon ECR is configured to scan images on push. The Jenkins pipeline is configured to fail on detection of critical CVEs.
+- **Vulnerability Protection:** The application is protected against common web vulnerabilities including SQL Injection, XSS, and CSRF, with additional protection provided by Kong's request-transformation and CORS plugins.
 
 ### 5.3 Reliability
 
@@ -184,18 +233,34 @@ As a web-based application, the system will not interface directly with any spec
 
 ### 5.5 Scalability
 
-- **Architectural Design:** The application architecture must be designed to handle a gradual increase in the number of students, mentors, and the volume of data stored over several academic years.
-    - **Stateless Backend:** The Spring Boot backend services shall be stateless, allowing for horizontal scaling by running multiple instances behind a load balancer.
-    - **Database Scaling:** The PostgreSQL database must be configured with efficient indexing strategies. Connection pooling will be used to manage database connections effectively.
-    - **Asynchronous Processing:** Long-running tasks, such as generating large reports, should be handled asynchronously to avoid blocking user requests.
+- **Architectural Design:** The microservices architecture deployed on EKS is designed to handle a gradual increase in the number of students, mentors, and data volume over multiple academic years.
+    - **Stateless Microservices:** All Spring Boot backend services are stateless, enabling horizontal scaling. Multiple replicas of each service can run simultaneously behind Kong/ALB.
+    - **Kubernetes Horizontal Pod Autoscaler (HPA):** In production, each microservice deployment is configured with HPA to automatically scale the number of pod replicas based on CPU/memory usage.
+    - **Node Autoscaling:** The EKS node group supports cluster autoscaling. In production, minimum 2 nodes of `t4g.small` are used, with autoscaling to add nodes on demand.
+    - **Database Scaling:** Amazon RDS PostgreSQL is configured with efficient indexing strategies. HikariCP connection pooling manages database connections. The RDS instance can be scaled vertically (instance type upgrade) with minimal downtime.
+    - **Asynchronous Processing:** Long-running tasks (e.g., large report generation, student registration across services) are handled asynchronously via the RabbitMQ event bus, preventing blocking of user requests.
+    - **CDN for Frontend:** The React PWA is served via AWS CloudFront, which independently scales to handle traffic spikes for the static frontend without impacting backend services.
+
+  | Aspect | Dev | Staging | Prod |
+  |---|---|---|---|
+  | EKS Nodes | 2× `t4g.micro` | 2× `t4g.micro` | 2× `t4g.small` + autoscaling |
+  | RDS | `db.t4g.micro`, single-AZ | `db.t4g.micro`, single-AZ | `db.t4g.micro`, single-AZ |
+  | Replicas per service | 1 | 1 | 2+ with HPA |
 
 ### 5.6 Maintainability
 
 - **Code Quality and Principles:** The source code must be well-documented, clean, and follow industry best practices and design principles to facilitate future updates and maintenance.
-    - **Backend (Spring Boot):** The code should adhere to SOLID principles and a clear separation of concerns (e.g., Controller-Service-Repository layers).
-    - **Frontend (React):** The code should follow a component-based architecture, with a clear state management strategy to handle application data.
-    - **Modularity:** The application should be designed in a modular fashion, allowing individual features to be updated or replaced with minimal impact on other parts of the system.
-    - **CI/CD:** A Continuous Integration/Continuous Deployment (CI/CD) pipeline should be established for automated testing and deployment, ensuring code quality and release stability.
+    - **Backend (Spring Boot):** The code adheres to SOLID principles and a clear separation of concerns (Controller → Service → Repository layers). Services are independently deployable and versioned.
+    - **Frontend (React):** The code follows a component-based architecture using Shadcn/ui, with Zod for form validation and a clear state management strategy.
+    - **Modularity:** Each microservice is independently maintainable. Changes to one service do not require redeployment of others, reducing blast radius.
+    - **CI/CD Pipeline (Jenkins):** A Jenkins pipeline (triggered by GitHub webhooks) automates the full build-deploy lifecycle:
+      1. **Build Phase:** `mvn compile jib:build` builds OCI images and pushes directly to ECR via Jib (no Docker daemon required).
+      2. **Infrastructure Phase:** `terraform plan` / `terraform apply` (with approval gate) provisions or updates AWS resources.
+      3. **Deploy Phase:** `helm upgrade --install` performs rolling updates on EKS pods.
+    - **Infrastructure as Code:** All infrastructure is defined in Terraform (7 reusable modules: `vpc`, `eks`, `rds`, `ecr`, `s3-cloudfront`, `route53`, `iam`) with environment-specific roots (`dev`, `staging`, `prod`). Terraform state is locked using the PostgreSQL backend on RDS.
+    - **Kubernetes Workloads (Helm):** All Kubernetes workloads are managed declaratively via Helm charts. Helmfile provides a single entry point for multi-chart deployments. Environment-specific values are separated into `values-dev.yaml`, `values-staging.yaml`, and `values-prod.yaml`.
+    - **Observability for Maintainability:** Grafana dashboards (Kong, JVM, RabbitMQ), Zipkin traces, and Prometheus metrics provide full visibility into system health, enabling rapid diagnosis and resolution of production issues.
+    - **Rollback:** Helm's built-in revision tracking enables one-command rollback to any previous deployment revision via `infrastructure/scripts/rollback.sh`.
 
 ### 5.7 Offline Support
 
@@ -212,140 +277,184 @@ Please refer to the `ui_descriptions.md` document for a detailed, page-by-page b
 
 ### 7. API Endpoints Specification
 
-(This section will be updated to reflect the new data structures, e.g., adding endpoints for `StudentGeneralProfile`, `SemesterMentoringActivity`, `SemesterReviews`)
+All API endpoints are exposed through the **Kong API Gateway** and secured via JWT + ACL plugins (see Section 4.3 for role-to-route mapping). Each microservice owns its own endpoint namespace:
 
-### 8. Database Schema (PostgreSQL)
+#### 7.1 student-general-profile-service
 
-This section provides the updated SQL statements to create the database schema.
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/student/general-profile/{studentId}` | Retrieve a student's general profile | JWT + ACL |
+| `PUT` | `/api/student/general-profile/{studentId}` | Update a student's general profile | JWT + ACL (faculty) |
+| `GET` | `/api/student/semester/{studentId}/{year}/{semester}` | Retrieve semester-specific data | JWT + ACL |
+| `PUT` | `/api/student/semester/{studentId}/{year}/{semester}` | Update semester-specific data | JWT + ACL (faculty) |
+| `GET` | `/actuator/health` | Health check | Public |
+| `GET` | `/actuator/prometheus` | Prometheus metrics scrape | Internal (cluster only) |
 
+#### 7.2 student-registration-service
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/student/register` | Register a new student (triggers Saga) | JWT + ACL (faculty, admin) |
+| `GET` | `/actuator/health` | Health check | Public |
+
+#### 7.3 student-passout-service
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/student/passout` | Mark student as passed out (triggers Saga) | JWT + ACL (faculty, admin, principal) |
+| `GET` | `/actuator/health` | Health check | Public |
+
+> **Note:** Each service also exposes Spring Boot Actuator endpoints (`/actuator/health`, `/actuator/prometheus`) within the cluster for health checks and Prometheus scraping. These are not exposed externally through Kong.
+
+> **Note on User Management:** In production, user accounts and roles are managed entirely in **Keycloak**. Any internal service-level user/identity references (e.g., linking mentor assignments or session records to a user ID) use the Keycloak subject (`sub` claim) from the JWT. Role enforcement is handled at the Kong gateway layer via the ACL plugin, not at the database layer.
+
+---
+
+### 9. System Architecture
+
+This section is the self-contained description of the production deployment architecture for PECTOP. It documents the topology, microservice roles, event flows, and environment comparison for the system.
+
+#### 9.1 Deployment Topology
+
+All production workloads run on **Amazon EKS** within an AWS VPC. Services are organized into Kubernetes namespaces:
+
+| Namespace | Components |
+|---|---|
+| `kong` | Kong API Gateway (DB mode + PostgreSQL) |
+| `auth` | Keycloak (Identity Provider) |
+| `pec-app` | `student-general-profile-service`, `student-registration-service`, `student-passout-service` |
+| `observability` | Zipkin, Prometheus, Grafana |
+| `messaging` | RabbitMQ |
+
+**Architecture Diagram:**
+
+```mermaid
+graph TB
+    subgraph Internet
+        User(["User / Browser"])
+    end
+
+    subgraph AWS["AWS Cloud"]
+        R53[Route 53 DNS]
+
+        subgraph FE["Frontend — 5 Independent Deployments"]
+            CF_L[CloudFront: landing]
+            CF_LG[CloudFront: login]
+            CF_S[CloudFront: student]
+            CF_P[CloudFront: parent]
+            CF_F[CloudFront: faculty]
+            S3_L[S3: landing]
+            S3_LG[S3: login]
+            S3_S[S3: student]
+            S3_P[S3: parent]
+            S3_F[S3: faculty]
+        end
+
+        ALB[AWS ALB Ingress]
+
+        subgraph VPC["VPC"]
+            subgraph EKS["EKS Cluster"]
+                subgraph ns_kong["Namespace: kong"]
+                    Kong["Kong API Gateway\n(DB Mode)"]
+                end
+                subgraph ns_auth["Namespace: auth"]
+                    Keycloak[Keycloak]
+                end
+                subgraph ns_app["Namespace: pec-app"]
+                    SGP[student-general-profile-service]
+                    SRS[student-registration-service]
+                    SPS[student-passout-service]
+                end
+                subgraph ns_obs["Namespace: observability"]
+                    Zipkin[Zipkin]
+                    Prometheus[Prometheus]
+                    Grafana[Grafana]
+                end
+                subgraph ns_msg["Namespace: messaging"]
+                    RabbitMQ[RabbitMQ]
+                end
+            end
+            RDS[("Amazon RDS PostgreSQL\nDatabases: app, keycloak, kong, terraform_state")]
+        end
+    end
+
+    User --> R53
+    R53 -->|landing.domain| CF_L --> S3_L
+    R53 -->|login.domain| CF_LG --> S3_LG
+    R53 -->|student.domain| CF_S --> S3_S
+    R53 -->|parent.domain| CF_P --> S3_P
+    R53 -->|faculty.domain| CF_F --> S3_F
+    R53 -->|api.domain| ALB --> Kong
+    Kong -->|JWT Validation| Keycloak
+    Kong --> SGP
+    Kong --> SRS
+    Kong --> SPS
+    SRS -->|student-register event| RabbitMQ
+    SPS -->|student-passout event| RabbitMQ
+    RabbitMQ -->|consume + saga rollback| SGP
+    SGP --> RDS
+    SRS --> RDS
+    SPS --> RDS
+    SGP -.->|traces| Zipkin
+    SGP -.->|metrics| Prometheus
+    Prometheus --> Grafana
 ```
--- Programs Table (e.g., B.E., M.B.A.)
-CREATE TABLE Programs (
-    program_id SERIAL PRIMARY KEY,
-    program_name VARCHAR(255) UNIQUE NOT NULL, -- e.g., 'B.E.', 'M.B.A.'
-    duration_years INT NOT NULL -- e.g., 4, 2
-);
 
--- Branches Table (e.g., Computer Science, Finance)
-CREATE TABLE Branches (
-    branch_id SERIAL PRIMARY KEY,
-    program_id INT NOT NULL REFERENCES Programs(program_id) ON DELETE CASCADE,
-    branch_name VARCHAR(255) NOT NULL,
-    UNIQUE(program_id, branch_name)
-);
+**Traffic Flow:**
 
--- Users Table: For authentication and roles
-CREATE TABLE Users (
-    user_id SERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
-    role VARCHAR(50) NOT NULL CHECK (role IN ('Administrator', 'HOD', 'Mentor', 'Student', 'Parent')),
-    department VARCHAR(255), -- Department for HOD and Mentor roles
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+1. User → Route 53 DNS (resolves to one of 5 sub-domains or the API domain)
+2. Frontend requests → per-role **CloudFront distribution** → dedicated **S3 bucket** (5 separate stacks: `landing`, `login`, `student`, `parent`, `faculty`)
+3. API requests → **ALB Ingress** → Kong (`kong` namespace)
+4. Kong validates JWT against Keycloak → proxies to appropriate microservice in `pec-app`
+5. Microservices → Amazon RDS PostgreSQL (for data persistence)
+6. `student-registration-service` / `student-passout-service` **publish events** to RabbitMQ (producer-only). `student-general-profile-service` **consumes** those events and acts accordingly.
+7. Microservices emit traces → Zipkin; metrics → Prometheus → Grafana
 
--- Students Table (Core, mostly static info)
-CREATE TABLE Students (
-    student_id SERIAL PRIMARY KEY,
-    user_id INT UNIQUE REFERENCES Users(user_id) ON DELETE SET NULL,
-    branch_id INT REFERENCES Branches(branch_id), -- Link to the branch
-    register_number VARCHAR(100) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    batch VARCHAR(50), -- e.g., '2023-2027', can be auto-calculated
-    section CHAR(1),
-    date_of_birth DATE,
-    sex VARCHAR(20),
-    -- ... other core personal details from pages 1-3 ...
-    address_final TEXT, -- For address at time of leaving
-    photo_admission_url VARCHAR(255),
-    photo_leaving_url VARCHAR(255)
-);
+#### 9.2 Microservice Descriptions
 
--- Student General Profile (One-time data from Page 4)
-CREATE TABLE StudentGeneralProfile (
-    profile_id SERIAL PRIMARY KEY,
-    student_id INT UNIQUE NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    long_term_ambition TEXT,
-    career_option VARCHAR(100), -- 'Higher Studies', 'Job', 'Entrepreneur'
-    swot_strength_academic TEXT,
-    swot_strength_general TEXT,
-    swot_weakness_academic TEXT,
-    swot_weakness_general TEXT,
-    living_style_details TEXT,
-    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+| Service | Role | Communication |
+|---|---|---|
+| `student-general-profile-service` | Manages pre-college student data and basic student details required to get started: personal info, family background, previous education history (10th/12th), and initial general profile (PDF pages 2–4) | **Consumer** (RabbitMQ events from SRS/SPS); accepts direct REST calls from Kong and other authorized services via K8s CoreDNS + Resilience4j |
+| `student-registration-service` | Saga orchestrator for student registration | **Producer only** — publishes `student-register` event to RabbitMQ; receives compensating event ACKs. Does not call other services directly. |
+| `student-passout-service` | Saga orchestrator for end-of-program passout | **Producer only** — publishes `student-passout` event to RabbitMQ; receives compensating event ACKs. Does not call other services directly. |
 
--- Parents Table, Siblings Table, Education History Table (remain largely the same)
--- ...
+#### 9.3 Saga Event Flows
 
--- Academic Performance Table (Per Semester)
-CREATE TABLE AcademicPerformance (
-    performance_id SERIAL PRIMARY KEY,
-    student_id INT NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    year INT NOT NULL,
-    semester INT NOT NULL,
-    gpa NUMERIC(4, 2),
-    cgpa NUMERIC(4, 2),
-    attendance_percentage NUMERIC(5, 2),
-    number_of_arrears INT,
-    UNIQUE(student_id, year, semester)
-);
+**Student Registration Saga:**
+1. Client calls `POST /api/student/register` on `student-registration-service`.
+2. Service publishes a `student-register` event to RabbitMQ.
+3. All downstream services (e.g., `student-general-profile-service`) consume the event and create their respective records.
+4. On full success → respond `201 Created`.
+5. On any failure → orchestrator publishes compensating events (e.g., `delete profile`) to rollback all participants → respond `500 Registration Failed`.
 
--- Semester Mentoring Activity (Per Semester data from Page 5)
-CREATE TABLE SemesterMentoringActivity (
-    activity_id SERIAL PRIMARY KEY,
-    student_id INT NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    year INT NOT NULL,
-    semester INT NOT NULL,
-    field_of_interest TEXT,
-    favourite_subject TEXT,
-    hardest_subject TEXT,
-    library_visit_frequency VARCHAR(100),
-    -- ... other fields from page 5 ...
-    UNIQUE(student_id, year, semester)
-);
+**Student Passout Saga:**
+1. Client calls `POST /api/student/passout` on `student-passout-service`.
+2. Service publishes a `student-passout` event to RabbitMQ.
+3. All downstream services consume the event and archive/update records accordingly.
+4. On full success → respond `200 OK`.
+5. On any failure → orchestrator publishes compensating events to revert status changes → respond `500 Passout Failed`.
 
--- Mentoring Chart Table (Per Semester data from Page 6 - remains the same)
-CREATE TABLE MentoringCharts (
-    chart_id SERIAL PRIMARY KEY,
-    student_id INT NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    year INT NOT NULL,
-    semester INT NOT NULL,
-    -- ... fields for time management, ratings etc. ...
-    class_routine_ratings JSONB,
-    monthly_test_ratings JSONB,
-    university_exam_prep JSONB,
-    UNIQUE(student_id, year, semester)
-);
+#### 9.4 Deployment Order
 
--- Mentoring Sessions Table (Multiple per semester, from Page 7)
-CREATE TABLE MentoringSessions (
-    session_id SERIAL PRIMARY KEY,
-    student_id INT NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    mentor_id INT NOT NULL REFERENCES Users(user_id),
-    year INT NOT NULL,
-    semester INT NOT NULL,
-    session_date DATE NOT NULL,
-    rating_as_person INT,
-    -- ... other rating fields ...
-    mentor_remarks TEXT
-);
+The following order must be followed when provisioning from scratch:
 
--- Semester Reviews Table (One per semester, from Page 8)
-CREATE TABLE SemesterReviews (
-    review_id SERIAL PRIMARY KEY,
-    student_id INT NOT NULL REFERENCES Students(student_id) ON DELETE CASCADE,
-    mentor_id INT NOT NULL REFERENCES Users(user_id),
-    year INT NOT NULL,
-    semester INT NOT NULL,
-    overall_remarks TEXT,
-    disciplinary_issues TEXT,
-    follow_up_required BOOLEAN DEFAULT FALSE,
-    UNIQUE(student_id, year, semester)
-);
+1. **Terraform** → VPC → EKS (t4g nodes) → RDS (app + keycloak + kong + terraform_state databases) → ECR → S3/CloudFront → Route 53
+2. **Helm (Infrastructure)** → Kong (DB mode) → Keycloak → RabbitMQ → Prometheus/Grafana → Zipkin
+3. **Helm (Application)** → `pec-app` chart (`student-general-profile-service`, `student-registration-service`, `student-passout-service`)
+4. **Kong Config** → Define routes + attach JWT/ACL plugins per route
+5. **Keycloak Seed** → Import `pec-portal` realm with clients and roles (`student`, `faculty`, `parent`, `principal`, `hod`, `admin`)
+6. **DNS Cutover** → Point Route 53 records to ALB
 
--- Projects Table, Placements Table (remain largely the same)
--- ...
+#### 9.5 Local Development vs. Production
 
-```
+| Concern | Local Dev | Production (EKS) |
+|---|---|---|
+| API Gateway | Spring Cloud Gateway | Kong (DB mode) |
+| Service Discovery | Eureka | Kubernetes CoreDNS |
+| Auth | Keycloak (Docker Compose) | Keycloak (Helm on EKS) |
+| Database | PostgreSQL (Docker Compose) | Amazon RDS PostgreSQL |
+| Containerization | `mvn spring-boot:run` | Jib → OCI image → ECR |
+| Secrets | Local `.env` / `application.properties` | AWS Secrets Manager + External Secrets Operator |
+| IaC | `docker-compose.yml` | Terraform + Helm + Helmfile |
+
+> **Note:** The `api-gateway` (Spring Cloud Gateway) and `discovery-server` (Eureka) modules are **not deployed to Kubernetes**. They are retained in the repository solely to support the local development workflow via Docker Compose.
