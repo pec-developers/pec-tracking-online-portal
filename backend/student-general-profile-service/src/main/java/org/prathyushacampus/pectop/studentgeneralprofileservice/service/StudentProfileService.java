@@ -25,6 +25,12 @@ public class StudentProfileService {
     private final S3StorageService s3StorageService;
 
     public StudentPublicProfileResponse addNewStudentPublicProfile(InitialStudentProfileRequest request) {
+        if (request.getAdmissionNumber() != null &&
+                studentPublicProfileRepository.existsByAcademicDetails_AdmissionNumber(request.getAdmissionNumber())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Student with admission number " + request.getAdmissionNumber() + " already exists");
+        }
+
         StudentAcademicDetails academicDetails = StudentAcademicDetails.builder()
                 .name(request.getName())
                 .admissionNumber(request.getAdmissionNumber())
@@ -49,6 +55,26 @@ public class StudentProfileService {
     public StudentPublicProfileResponse modifyStudentPublicProfile(String studentId,
             StudentPublicProfileRequest request) {
         StudentPublicProfile studentPublicProfile = findProfileByStudentId(studentId);
+
+        // Proactive validation for duplicate admission/register numbers
+        if (request.getAcademicDetails() != null) {
+            String newAdmission = request.getAcademicDetails().getAdmissionNumber();
+            String newRegister = request.getAcademicDetails().getRegisterNumber();
+
+            if (newAdmission != null) {
+                if (studentPublicProfileRepository.existsByAcademicDetails_AdmissionNumberAndStudentIdNot(newAdmission, studentId)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Admission number " + newAdmission + " is already taken by another student");
+                }
+            }
+
+            if (newRegister != null) {
+                if (studentPublicProfileRepository.existsByAcademicDetails_RegisterNumberAndStudentIdNot(newRegister, studentId)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Register number " + newRegister + " is already taken by another student");
+                }
+            }
+        }
 
         clearHostelFieldsIfNotHostel(studentPublicProfile, request);
         deepCopyNonNullProperties(request, studentPublicProfile);
@@ -111,6 +137,7 @@ public class StudentProfileService {
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));
     }
 
+    @SuppressWarnings("unchecked")
     private void deepCopyNonNullProperties(Object source, Object target) {
         if (source == null || target == null)
             return;
@@ -130,8 +157,19 @@ public class StudentProfileService {
             if (trgWrap.isWritableProperty(propertyName)) {
                 Object trgValue = trgWrap.getPropertyValue(propertyName);
 
-                // Check if the property is a nested model class or an embeddable class
-                if (trgValue != null && (isModelClass(srcValue.getClass()) || isEmbeddable(srcValue.getClass()))) {
+                if (srcValue instanceof java.util.List<?> srcList) {
+                    // IMPORTANT: Never replace a Hibernate-managed collection reference.
+                    // Doing so detaches the PersistentBag and causes the
+                    // "collection with orphan deletion was no longer referenced" exception.
+                    // Instead, clear the existing managed collection and refill it.
+                    if (trgValue instanceof java.util.List<?> trgList) {
+                        ((java.util.List<Object>) trgList).clear();
+                        ((java.util.List<Object>) trgList).addAll((java.util.List<Object>) srcList);
+                    } else {
+                        trgWrap.setPropertyValue(propertyName, srcValue);
+                    }
+                } else if (trgValue != null && (isModelClass(srcValue.getClass()) || isEmbeddable(srcValue.getClass()))) {
+                    // Recursively merge nested model/embeddable objects
                     deepCopyNonNullProperties(srcValue, trgValue);
                 } else {
                     trgWrap.setPropertyValue(propertyName, srcValue);

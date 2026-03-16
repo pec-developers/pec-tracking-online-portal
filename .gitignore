@@ -57,3 +57,6 @@ dist-ssr
 
 # Gemini
 .gemini/*
+
+postgres_data/
+postman/

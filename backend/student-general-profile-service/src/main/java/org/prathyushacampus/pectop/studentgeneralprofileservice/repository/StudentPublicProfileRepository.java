@@ -9,4 +9,10 @@ import java.util.Optional;
 @Repository
 public interface StudentPublicProfileRepository extends JpaRepository<StudentPublicProfile, Long> {
     Optional<StudentPublicProfile> findByStudentId(String studentId);
+
+    boolean existsByAcademicDetails_AdmissionNumber(String admissionNumber);
+
+    boolean existsByAcademicDetails_AdmissionNumberAndStudentIdNot(String admissionNumber, String studentId);
+
+    boolean existsByAcademicDetails_RegisterNumberAndStudentIdNot(String registerNumber, String studentId);
 }
