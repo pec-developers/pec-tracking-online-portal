@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,12 +34,13 @@ class StudentProfileServiceTest {
     @InjectMocks
     private StudentProfileService studentProfileService;
 
-    private String studentId = "43345805-947b-4361-a6ba-9be64b354580";
+    private UUID studentId = UUID.fromString("43345805-947b-4361-a6ba-9be64b354580");
     private String admissionNumber = "ADM2021001";
 
     @Test
     void addNewStudentPublicProfile_WhenAdmissionNumberExists_ShouldThrowConflict() {
         InitialStudentProfileRequest request = InitialStudentProfileRequest.builder()
+                .studentId(studentId)
                 .admissionNumber(admissionNumber)
                 .build();
 

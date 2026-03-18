@@ -1,5 +1,7 @@
 package org.prathyushacampus.pectop.studentgeneralprofileservice.dto;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InitialStudentProfileRequest {
-    private String studentId;
+    private UUID studentId;
     private String name;
     private String admissionNumber;
 }

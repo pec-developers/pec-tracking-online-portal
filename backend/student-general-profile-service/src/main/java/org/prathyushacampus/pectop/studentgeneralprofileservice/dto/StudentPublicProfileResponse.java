@@ -6,12 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.model.*;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentPublicProfileResponse {
-    private String studentId;
+    private UUID studentId;
     private StudentAcademicDetails academicDetails;
     private StudentPersonalDetails personalDetails;
     private StudentFamilyDetails familyDetails;

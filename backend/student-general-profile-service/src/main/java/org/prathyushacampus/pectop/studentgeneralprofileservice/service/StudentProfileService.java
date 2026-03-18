@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -47,12 +48,12 @@ public class StudentProfileService {
     }
 
     @Transactional(readOnly = true)
-    public StudentPublicProfileResponse getStudentPublicProfile(String studentId) {
+    public StudentPublicProfileResponse getStudentPublicProfile(UUID studentId) {
         StudentPublicProfile studentPublicProfile = findProfileByStudentId(studentId);
         return studentPublicProfileMapper.mapToResponse(studentPublicProfile);
     }
 
-    public StudentPublicProfileResponse modifyStudentPublicProfile(String studentId,
+    public StudentPublicProfileResponse modifyStudentPublicProfile(UUID studentId,
             StudentPublicProfileRequest request) {
         StudentPublicProfile studentPublicProfile = findProfileByStudentId(studentId);
 
@@ -83,7 +84,7 @@ public class StudentProfileService {
         return studentPublicProfileMapper.mapToResponse(savedProfile);
     }
 
-    public StudentPublicProfileResponse uploadFatherImage(String studentId, MultipartFile file) {
+    public StudentPublicProfileResponse uploadFatherImage(UUID studentId, MultipartFile file) {
         StudentPublicProfile profile = findProfileByStudentId(studentId);
 
         String imageUrl = s3StorageService.uploadImage(studentId, "father", file);
@@ -100,7 +101,7 @@ public class StudentProfileService {
         return studentPublicProfileMapper.mapToResponse(savedProfile);
     }
 
-    public StudentPublicProfileResponse uploadMotherImage(String studentId, MultipartFile file) {
+    public StudentPublicProfileResponse uploadMotherImage(UUID studentId, MultipartFile file) {
         StudentPublicProfile profile = findProfileByStudentId(studentId);
 
         String imageUrl = s3StorageService.uploadImage(studentId, "mother", file);
@@ -117,7 +118,7 @@ public class StudentProfileService {
         return studentPublicProfileMapper.mapToResponse(savedProfile);
     }
 
-    public StudentPublicProfileResponse uploadSelfImage(String studentId, MultipartFile file) {
+    public StudentPublicProfileResponse uploadSelfImage(UUID studentId, MultipartFile file) {
         StudentPublicProfile profile = findProfileByStudentId(studentId);
 
         String imageUrl = s3StorageService.uploadImage(studentId, "self", file);
@@ -131,7 +132,7 @@ public class StudentProfileService {
         return studentPublicProfileMapper.mapToResponse(savedProfile);
     }
 
-    private StudentPublicProfile findProfileByStudentId(String studentId) {
+    private StudentPublicProfile findProfileByStudentId(UUID studentId) {
         return studentPublicProfileRepository.findByStudentId(studentId)
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student Public Profile not found"));

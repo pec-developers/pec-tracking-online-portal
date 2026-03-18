@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.BaseIntegrationTest;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.InitialStudentProfileRequest;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.model.StudentPublicProfile;
+import java.util.UUID;
 import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,7 +16,7 @@ class PostStudentProfileTest extends BaseIntegrationTest {
 
     @Test
     void testCreateStudentProfile() throws Exception {
-        String studentId = "43345805-947b-4361-a6ba-9be64b354580";
+        UUID studentId = UUID.fromString("43345805-947b-4361-a6ba-9be64b354580");
         String admissionNumber = "ADM2021001";
 
         InitialStudentProfileRequest postRequest = getInitialRequest(studentId, admissionNumber);

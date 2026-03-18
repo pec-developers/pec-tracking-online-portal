@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.BaseIntegrationTest;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.dto.StudentPublicProfileRequest;
 import org.springframework.http.MediaType;
-
+import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class PutStudentProfileTest extends BaseIntegrationTest {
 
-    private final String studentId = "43345805-947b-4361-a6ba-9be64b354580";
+    private final UUID studentId = UUID.fromString("43345805-947b-4361-a6ba-9be64b354580");
     private final String admissionNumber = "ADM2021001";
 
     @BeforeEach

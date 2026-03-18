@@ -11,7 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.UUID;
 
 
 
@@ -42,7 +43,7 @@ public abstract class BaseIntegrationTest {
     protected ObjectMapper objectMapper;
 
     @Container
-    protected static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:15")
+    protected static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer("postgres:15")
             .withDatabaseName("testdb")
             .withUsername("test")
             .withPassword("test")
@@ -56,7 +57,7 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.jpa.properties.hibernate.jdbc.time_zone", () -> "Asia/Kolkata");
     }
 
-    protected InitialStudentProfileRequest getInitialRequest(String studentId, String admissionNumber) {
+    protected InitialStudentProfileRequest getInitialRequest(UUID studentId, String admissionNumber) {
         return InitialStudentProfileRequest.builder()
                 .studentId(studentId)
                 .name("Arjun Ramesh Kumar")
@@ -64,7 +65,7 @@ public abstract class BaseIntegrationTest {
                 .build();
     }
 
-    protected void performPost(String studentId, String admissionNumber) throws Exception {
+    protected void performPost(UUID studentId, String admissionNumber) throws Exception {
         InitialStudentProfileRequest postRequest = getInitialRequest(studentId, admissionNumber);
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/general-profile")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
@@ -72,7 +73,7 @@ public abstract class BaseIntegrationTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated());
     }
 
-    protected void performPut(String studentId, String admissionNumber) throws Exception {
+    protected void performPut(UUID studentId, String admissionNumber) throws Exception {
         StudentPublicProfileRequest putRequest = createSamplePutRequest(admissionNumber);
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/general-profile/" + studentId)
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)

@@ -2,7 +2,7 @@ package org.prathyushacampus.pectop.studentgeneralprofileservice.controller.get;
 
 import org.junit.jupiter.api.Test;
 import org.prathyushacampus.pectop.studentgeneralprofileservice.BaseIntegrationTest;
-
+import java.util.UUID;
 import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class GetStudentProfileTest extends BaseIntegrationTest {
 
-    private final String studentId = "43345805-947b-4361-a6ba-9be64b354580";
+    private final UUID studentId = UUID.fromString("43345805-947b-4361-a6ba-9be64b354580");
     private final String admissionNumber = "ADM2021001";
 
     @Test

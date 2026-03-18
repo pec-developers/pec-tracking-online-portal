@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "student_public_profile_t")
 @Data
@@ -19,7 +21,7 @@ public class StudentPublicProfile {
     private Long id;
     
     @Column(unique = true, nullable = false)
-    private String studentId;
+    private UUID studentId;
     
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "academic_details_id")

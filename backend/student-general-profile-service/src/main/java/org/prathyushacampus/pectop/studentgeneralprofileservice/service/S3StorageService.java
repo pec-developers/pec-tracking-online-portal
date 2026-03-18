@@ -9,7 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
+import java.util.UUID;
 import java.io.IOException;
 
 @Service
@@ -32,7 +32,7 @@ public class S3StorageService {
      * @param file      the uploaded image file
      * @return the CloudFront URL of the uploaded image
      */
-    public String uploadImage(String studentId, String imageType, MultipartFile file) {
+    public String uploadImage(UUID studentId, String imageType, MultipartFile file) {
         String extension = getFileExtension(file.getOriginalFilename());
         String key = "student-profiles/" + studentId + "/" + imageType + "." + extension;
 
