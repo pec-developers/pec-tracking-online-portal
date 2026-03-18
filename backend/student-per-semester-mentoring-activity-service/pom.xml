@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>student-per-semester-mentoring-activity-service</artifactId>
-    <name>Student per-semester Mentoring Activity Service</name>
+    <name>student-per-semester-mentoring-activity-service</name>
     <description>student-per-semester-mentoring-activity-service</description>
 
     <properties>
