@@ -21,6 +21,12 @@
         <module>api-gateway</module>
         <module>discovery-server</module>
         <module>student-general-profile-service</module>
+        <module>student-mentoring-activity-service</module>
+        <module>student-mentoring-chart-service</module>
+        <module>student-academic-performance-service</module>
+        <module>student-mentor-review-service</module>
+        <module>faculty-service</module>
+        <module>central-academic-tracking-service</module>
     </modules>
 
     <properties>
