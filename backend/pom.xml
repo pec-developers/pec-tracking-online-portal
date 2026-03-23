@@ -25,6 +25,7 @@
         <module>student-mentoring-chart-service</module>
         <module>student-academic-performance-service</module>
         <module>student-mentor-review-service</module>
+        <module>student-end-program-service</module>
         <module>faculty-service</module>
         <module>central-academic-tracking-service</module>
     </modules>
