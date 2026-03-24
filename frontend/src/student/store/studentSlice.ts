@@ -1,25 +1,33 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+// ──────────────────────────────────────────────
+// Flux: STORE  (Dispatcher → Store)
+// Holds the canonical student profile state.
+// Reducers are pure functions — no side effects.
+// ──────────────────────────────────────────────
 
-interface StudentState {
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { StudentPublicProfile } from './types'
+
+export interface StudentState {
+    profile: StudentPublicProfile | null
     profileLoaded: boolean
-    name: string | null
 }
 
 const initialState: StudentState = {
+    profile: null,
     profileLoaded: false,
-    name: null,
 }
 
 export const studentSlice = createSlice({
     name: 'student',
     initialState,
     reducers: {
-        setProfile: (state, action: PayloadAction<{ name: string }>) => {
-            state.name = action.payload.name
+        // ── Flux Action Handlers ─────────────────
+        setProfile: (state, action: PayloadAction<StudentPublicProfile>) => {
+            state.profile = action.payload
             state.profileLoaded = true
         },
         clearProfile: (state) => {
-            state.name = null
+            state.profile = null
             state.profileLoaded = false
         },
     },
