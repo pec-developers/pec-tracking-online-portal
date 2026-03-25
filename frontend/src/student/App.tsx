@@ -1,7 +1,9 @@
+import StudentProfilePage from './components/StudentProfilePage'
+
 function App() {
     return (
         <div>
-            <h1>PECTOP - Student Portal</h1>
+            <StudentProfilePage />
         </div>
     )
 }
