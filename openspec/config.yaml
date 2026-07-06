@@ -1,0 +1,25 @@
+schema: spec-driven
+
+# Project context
+context: |
+  Tech stack: TypeScript, React, Vite, TailwindCSS
+  Frontend Architecture: Multi-page micro-frontends (landing, login, student, parent, faculty)
+  Deployment Platform: Vercel Multi-Project Setup (migrated from AWS S3 + CloudFront Jenkins pipeline)
+  Target URLs:
+    - landing: pectop.vercel.app (outDir: dist/landing)
+    - login: auth-pectop.vercel.app (outDir: dist/login)
+    - student: student-pectop.vercel.app (outDir: dist/student)
+    - parent: parent-pectop.vercel.app (outDir: dist/parent)
+    - faculty/mentor: faculty-pectop.vercel.app (outDir: dist/faculty)
+  Vercel Config: app/frontend/vercel.json (SPA fallback routing)
+  CI/CD: .github/workflows/deploy-vercel.yml
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Keep proposals under 500 words
+    - Always include a "Non-goals" section
+  tasks:
+    - Break tasks into chunks of max 2 hours
+
+

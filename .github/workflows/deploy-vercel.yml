@@ -1,0 +1,79 @@
+name: Multi-Project Vercel Deployment
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/frontend/**'
+  pull_request:
+    paths:
+      - 'app/frontend/**'
+  workflow_dispatch:
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: app/frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm run test
+
+      - name: Detect Changed Apps
+        id: detect
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD~1 -- src/ shared/ package.json vite.config.ts tsconfig || echo "all")
+          echo "Changed files: $CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -E "(shared/|vite.config|package.json|tsconfig|all)"; then
+            echo "deploy_all=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy_all=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy Landing App (pectop.vercel.app)
+        if: ${{ steps.detect.outputs.deploy_all == 'true' || contains(github.event.head_commit.message, '[landing]') }}
+        run: |
+          npm run build:landing
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd=dist/landing --name=pectop --yes
+
+      - name: Deploy Auth/Login App (auth-pectop.vercel.app)
+        if: ${{ steps.detect.outputs.deploy_all == 'true' || contains(github.event.head_commit.message, '[login]') }}
+        run: |
+          npm run build:login
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd=dist/login --name=auth-pectop --yes
+
+      - name: Deploy Student App (student-pectop.vercel.app)
+        if: ${{ steps.detect.outputs.deploy_all == 'true' || contains(github.event.head_commit.message, '[student]') }}
+        run: |
+          npm run build:student
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd=dist/student --name=student-pectop --yes
+
+      - name: Deploy Parent App (parent-pectop.vercel.app)
+        if: ${{ steps.detect.outputs.deploy_all == 'true' || contains(github.event.head_commit.message, '[parent]') }}
+        run: |
+          npm run build:parent
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd=dist/parent --name=parent-pectop --yes
+
+      - name: Deploy Faculty/Mentor App (faculty-pectop.vercel.app)
+        if: ${{ steps.detect.outputs.deploy_all == 'true' || contains(github.event.head_commit.message, '[faculty]') }}
+        run: |
+          npm run build:faculty
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd=dist/faculty --name=faculty-pectop --yes
