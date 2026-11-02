@@ -21,10 +21,11 @@ export async function apiRequest<T = any>(
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // Prepend /api if not present
-  const url = endpoint.startsWith('/api')
-    ? endpoint
-    : `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const rawBase = (import.meta.env.VITE_API_URL as string | undefined) || '';
+  const baseUrl = rawBase.replace(/\/+$/, '');
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const normalizedPath = path.startsWith('/api') ? path : `/api${path}`;
+  const url = baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
 
   const res = await fetch(url, {
     ...options,

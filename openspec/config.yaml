@@ -25,7 +25,12 @@ context: |
   Legacy / Backup:
     - Previous multi-service Java Spring Boot backend backed up in app/backend-backup
     - Previous multi-domain micro-frontend Vite setup backed up in app/frontend-backup
-  Deployment Target: Single domain deployment (e.g., Vercel / single web server proxying /api to NestJS)
+  Deployment Target:
+    - Frontend: Vercel (React 19 Vite SPA with client-side rewrites, VITE_API_URL pointing to Render backend)
+    - Backend: Render (NestJS ESM Web Service with health check at /health and transparent /api prefixing)
+    - Database & Storage: Supabase (PostgreSQL with Supavisor connection pooler + Supabase Storage buckets 'pectop-media' and 'student-photos')
+    - Supabase CI/CD: GitHub Actions workflow (.github/workflows/deploy-supabase.yml) deploying schema DDL, storage buckets, RLS policies, and seed data
+    - Frontend & Backend CD: Handled independently by Vercel and Render Git integrations
 
 # Per-artifact rules
 rules:

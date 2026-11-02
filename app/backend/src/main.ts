@@ -5,10 +5,26 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for single-domain frontend or dev server
+  // Transparently rewrite /api/* to /* so both /api/... and direct routes work seamlessly
+  app.use((req: any, _res: any, next: () => void) => {
+    if (req.url.startsWith('/api/')) {
+      req.url = req.url.replace(/^\/api/, '');
+    } else if (req.url === '/api') {
+      req.url = '/';
+    }
+    next();
+  });
+
+  // Enable CORS for frontend deployment (Vercel, custom domain, and localhost)
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : true;
+
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization',
   });
 
   // Enable global validation pipe
@@ -20,8 +36,8 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-  console.log(`PECTOP Backend running on http://localhost:${port}`);
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`PECTOP Backend running on http://0.0.0.0:${port}`);
 }
 await bootstrap();
