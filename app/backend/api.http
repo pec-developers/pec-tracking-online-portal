@@ -1,0 +1,695 @@
+### PECTOP API Requests (REST Client / IntelliJ HTTP Client)
+# Tip: Execute the login requests first. Variables will capture the tokens automatically!
+
+@baseUrl = http://localhost:3000
+@defaultPassword = password123
+
+###############################################################################
+# 1. AUTHENTICATION & LOGIN (ALL 8 ROLES)
+###############################################################################
+
+### List all test accounts
+GET {{baseUrl}}/auth/test-users
+
+### 1.1 Login as Student
+# @name loginStudent
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "111422104001",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Student Token
+@studentToken = {{loginStudent.response.body.accessToken}}
+
+
+### 1.2 Login as Mentor
+# @name loginMentor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "mentor1",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Mentor Token
+@mentorToken = {{loginMentor.response.body.accessToken}}
+
+
+### 1.3 Login as Faculty
+# @name loginFaculty
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "faculty1",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Faculty Token
+@facultyToken = {{loginFaculty.response.body.accessToken}}
+
+
+### 1.4 Login as Class Coordinator
+# @name loginCoordinator
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "coordinator1",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Coordinator Token
+@coordinatorToken = {{loginCoordinator.response.body.accessToken}}
+
+
+### 1.5 Login as HOD
+# @name loginHOD
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "hod_cse",
+  "password": "{{defaultPassword}}"
+}
+
+### Save HOD Token
+@hodToken = {{loginHOD.response.body.accessToken}}
+
+
+### 1.6 Login as Principal
+# @name loginPrincipal
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "principal",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Principal Token
+@principalToken = {{loginPrincipal.response.body.accessToken}}
+
+
+### 1.7 Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Admin Token
+@adminToken = {{loginAdmin.response.body.accessToken}}
+
+
+### 1.8 Login as Parent
+# @name loginParent
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "parent1",
+  "password": "{{defaultPassword}}"
+}
+
+### Save Parent Token
+@parentToken = {{loginParent.response.body.accessToken}}
+
+
+### 1.9 Verify Current Profile (with Student Token)
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{studentToken}}
+
+
+###############################################################################
+# 2. STUDENT MODULE (/students) — FULL DATABASE INTEGRATION
+###############################################################################
+
+### 2.1 Admin onboards a new student (Booklet Front Cover)
+POST {{baseUrl}}/students/onboard
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "registerNumber": "111422104005",
+  "admissionNumber": "PEC2022CSE050",
+  "name": "Divya Bharathi R.",
+  "branch": "CSE",
+  "batchStart": 2022,
+  "batchEnd": 2026,
+  "section": "A",
+  "admissionType": "COUNSELING",
+  "lateralEntry": false,
+  "studentPhotoUrl": "https://storage.pec.edu/photos/111422104005_adm.jpg"
+}
+
+### 2.2 Student views their own full profile dossier
+GET {{baseUrl}}/students/me
+Authorization: Bearer {{studentToken}}
+
+### 2.3 Mentor or Faculty views student dossier by Register Number
+GET {{baseUrl}}/students/profile/111422104001
+Authorization: Bearer {{mentorToken}}
+
+### 2.4 List & filter students (by branch, section, search)
+GET {{baseUrl}}/students?branch=CSE&section=A
+Authorization: Bearer {{mentorToken}}
+
+### 2.5 Update Inside Cover: Personal details, Blood group, Food habits, Siblings
+PUT {{baseUrl}}/students/personal-details/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "dob": "2004-05-15",
+  "age": 20,
+  "sex": "MALE",
+  "state": "Tamil Nadu",
+  "nationality": "Indian",
+  "religion": "Hindu",
+  "community": "BC",
+  "caste": "Brahmin",
+  "bloodGroup": "O+",
+  "foodHabit": "VEG",
+  "motherTongue": "Tamil",
+  "otherLanguages": ["English", "Telugu"],
+  "contactMobile": "9840123456",
+  "contactLandline": "04427654321",
+  "email": "aravind@gmail.com",
+  "visionProblem": false,
+  "siblings": [
+    {
+      "name": "Swetha S.",
+      "age": 24,
+      "sex": "FEMALE",
+      "educationOrProfession": "Software Engineer"
+    }
+  ]
+}
+
+### 2.6 Update Page 1: Family details, Parents' occupation/income, Stay & Local guardian
+PUT {{baseUrl}}/students/family-details/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "fatherName": "Swaminathan M.",
+  "fatherEducation": "B.Com",
+  "fatherOccupation": "Senior Accountant",
+  "fatherMobile": "9840011223",
+  "fatherAnnualIncome": 650000,
+  "motherName": "Meenakshi S.",
+  "motherEducation": "B.Sc Maths",
+  "motherOccupation": "Home Maker",
+  "motherMobile": "9840022334",
+  "motherAnnualIncome": 0,
+  "parentCommunicationAddress": "Plot 12, Anna Nagar, Tiruvallur 602001",
+  "studentPermanentAddress": "Plot 12, Anna Nagar, Tiruvallur 602001",
+  "presentAddresses": {
+    "year1": "Plot 12, Anna Nagar, Tiruvallur 602001",
+    "year2": "Plot 12, Anna Nagar, Tiruvallur 602001"
+  },
+  "localGuardian": {
+    "name": "K. Ramanathan",
+    "address": "Tiruvallur",
+    "contactNumber": "9444012345"
+  },
+  "scholarshipDetails": "First Graduate Government Scholarship",
+  "otherFinancialAssistance": "None"
+}
+
+### 2.7 Update Page 1: Academic History (SSLC 10th, HSC 12th, Diploma)
+PUT {{baseUrl}}/students/academic-history/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "sslcSchoolName": "Vivekananda Vidyalaya Matriculation Higher Secondary School",
+  "sslcBoard": "State Board",
+  "sslcMedium": "English",
+  "sslcMarks": 471,
+  "sslcPercentage": 94.2,
+  "sslcYearOfPassing": 2020,
+  "hscSchoolName": "Vivekananda Vidyalaya Matriculation Higher Secondary School",
+  "hscBoard": "State Board",
+  "hscMathsMark": 98,
+  "hscPhysicsMark": 96,
+  "hscChemistryMark": 95,
+  "hscBiologyOrCsMark": 99,
+  "hscCutoff": 193.5,
+  "hscPercentage": 96.5,
+  "hscClass": "First Class with Distinction"
+}
+
+### 2.8 Update Page 2: Ambition, Career choices, Living Style & SWOT Analysis
+PUT {{baseUrl}}/students/ambition-profile/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "personalAimOrGoal": "Lead AI Engineer at a premier research lab",
+  "objectives": "Excel in algorithms, publish research papers in collegiate level",
+  "plansToAchieveAim": "Consistent competitive programming and open-source contributions",
+  "careerOption": "JOB",
+  "stayType": "DAYSCHOLAR",
+  "dayscholarStayWith": "PARENTS",
+  "parentCommFrequencyStudent": "Daily evening discussion",
+  "parentCommFrequencyParent": "Daily",
+  "holidayAndWeekendRoutine": "Weekend hackathons and coding practice",
+  "strengthsAcademic": "Data structures, algorithm complexity, discrete mathematics",
+  "strengthsGeneral": "Resilience, attention to detail, collaborative teamwork",
+  "weaknesses": "Hesitation in public debates (improving with seminar presentations)",
+  "likesBranch": true,
+  "mathFundamentalsRating": "Strong",
+  "coreEngineeringRating": "Strong",
+  "capableRaisingQuestions": true,
+  "sportsAndGames": [
+    {
+      "game": "Table Tennis",
+      "levelOfParticipation": "Zonal Tournament",
+      "prizesWon": "Runner Up"
+    }
+  ]
+}
+
+
+###############################################################################
+# 3. ACADEMIC MODULE (/academic) — FULL DATABASE INTEGRATION (PAGE C)
+###############################################################################
+
+### 3.1 Admin / Coordinator creates an Academic Class
+POST {{baseUrl}}/academic/classes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "department": "CSE",
+  "year": 2,
+  "semester": 4,
+  "section": "B",
+  "academicYear": "2024-2025"
+}
+
+### 3.2 List Academic Classes
+GET {{baseUrl}}/academic/classes?department=CSE
+Authorization: Bearer {{coordToken}}
+
+### 3.3 Admin creates a Subject in Catalog
+POST {{baseUrl}}/academic/subjects
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "CS8491",
+  "name": "Computer Architecture",
+  "department": "CSE",
+  "credits": 3,
+  "type": "THEORY"
+}
+
+### 3.4 List Subjects in Catalog
+GET {{baseUrl}}/academic/subjects?department=CSE
+Authorization: Bearer {{coordToken}}
+
+### 3.5 Coordinator initializes Semester 4 Scorecard for a Student (Page C)
+POST {{baseUrl}}/academic/performance/init
+Authorization: Bearer {{coordToken}}
+Content-Type: application/json
+
+{
+  "studentId": "111422104001",
+  "semester": 4,
+  "year": 2
+}
+
+### 3.6 Faculty enters test marks: IAT 1, IAT 2, Model, Internal marks (Page C)
+PUT {{baseUrl}}/academic/performance/111422104001/semester/4/marks
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+
+{
+  "subjectMarks": [
+    {
+      "subjectCode": "CS8401",
+      "subjectName": "Operating Systems",
+      "iat1": 88,
+      "iat2": 92,
+      "model": 89,
+      "internalMark": 19
+    },
+    {
+      "subjectCode": "CS8402",
+      "subjectName": "Database Management Systems",
+      "iat1": 94,
+      "iat2": 96,
+      "model": 95,
+      "internalMark": 20
+    }
+  ]
+}
+
+### 3.7 Coordinator updates Semester Attendance (Page C)
+PUT {{baseUrl}}/academic/performance/111422104001/semester/4/attendance
+Authorization: Bearer {{coordToken}}
+Content-Type: application/json
+
+{
+  "workingDays": 88,
+  "daysPresent": 84,
+  "daysAbsent": 4,
+  "leaveDays": 2,
+  "medicalLeave": 2
+}
+
+### 3.8 Mentor records University Exam Grades, Credits & GPA (Page C)
+PUT {{baseUrl}}/academic/performance/111422104001/semester/4/university-results
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "subjectResults": [
+    {
+      "subjectCode": "CS8401",
+      "credits": 3,
+      "univGrade": "A+",
+      "result": "PASS"
+    },
+    {
+      "subjectCode": "CS8402",
+      "credits": 4,
+      "univGrade": "O",
+      "result": "PASS"
+    }
+  ],
+  "gpa": 9.14,
+  "cgpa": 8.85
+}
+
+### 3.9 Mentor logs Arrears Tracking & Clearance (Page C)
+PUT {{baseUrl}}/academic/performance/111422104001/semester/4/arrears
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "arrears": [
+    {
+      "subjectCode": "MA8151",
+      "subjectName": "Engineering Mathematics I",
+      "semesterOccurred": 1,
+      "cleared": true,
+      "clearanceDate": "2024-01-15",
+      "attempts": [
+        {
+          "examSession": "Apr/May 2023",
+          "grade": "RA",
+          "result": "FAIL"
+        },
+        {
+          "examSession": "Nov/Dec 2023",
+          "grade": "B+",
+          "result": "PASS"
+        }
+      ]
+    }
+  ]
+}
+
+### 3.10 Student signs off their Semester 4 scorecard
+POST {{baseUrl}}/academic/performance/111422104001/semester/4/sign
+Authorization: Bearer {{studentToken}}
+
+### 3.11 Student views their own academic scorecard (All Semesters)
+GET {{baseUrl}}/academic/my-performance
+Authorization: Bearer {{studentToken}}
+
+### 3.12 Staff views student's Semester 4 scorecard
+GET {{baseUrl}}/academic/students/111422104001/semester/4
+Authorization: Bearer {{mentorToken}}
+
+
+###############################################################################
+# 4. MENTORING MODULE (/mentoring) — FULL DATABASE INTEGRATION (PAGES A, B, C, D)
+###############################################################################
+
+### 4.1 HOD / Admin assigns Mentee batch to Mentor
+POST {{baseUrl}}/mentoring/assignments
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+
+{
+  "mentorId": "mentor1",
+  "studentIds": ["111422104001"],
+  "academicYear": "2024-2025",
+  "semester": 4
+}
+
+### 4.2 Mentor views their assigned mentee roster
+GET {{baseUrl}}/mentoring/mentees
+Authorization: Bearer {{mentorToken}}
+
+### 4.3 Student views Page A Mentoring Activity
+GET {{baseUrl}}/mentoring/activity/111422104001/semester/4
+Authorization: Bearer {{studentToken}}
+
+### 4.4 Student updates Page A Mentoring Activity (Difficulties, Lab, Library, Communication)
+PUT {{baseUrl}}/mentoring/activity/111422104001/semester/4
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "fieldOfInterest": "Full-Stack Distributed Systems and Cloud Architecture",
+  "favoriteSubject": "Database Management Systems",
+  "favoriteSubjectReason": "Comprehensive SQL query optimization and database design",
+  "favoriteTeacher": "Dr. Ramesh Kumar",
+  "favoriteTeacherReason": "Practical hands-on lab coaching and industry insights",
+  "easiestSubject": "Software Engineering",
+  "hardestSubject": "Theory of Computation",
+  "hardestSubjectReason": "Abstract mathematical automata proofs",
+  "subjectProblems": ["Turing machine reductions need extra practice"],
+  "laboratoryUnderstanding": {
+    "theoryBeforeLab": true,
+    "experimentsCompletion": "Completed on schedule",
+    "recordSubmissionPunctual": true
+  },
+  "libraryDetails": {
+    "visitFrequency": "Weekly twice",
+    "booksBorrowed": ["Operating System Concepts (Silberschatz)", "Database System Concepts (Korth)"],
+    "dailiesRead": ["The Hindu", "Economic Times"]
+  },
+  "communicationEfforts": "Active speaker at technical seminar presentations",
+  "improvedOverTime": "Noticeable boost in technical fluency and confidence"
+}
+
+### 4.5 Mentor views Page B Mentoring Chart
+GET {{baseUrl}}/mentoring/chart/111422104001/semester/4
+Authorization: Bearer {{mentorToken}}
+
+### 4.6 Mentor updates Page B Mentoring Chart (Time Management & Routine Ratings)
+PUT {{baseUrl}}/mentoring/chart/111422104001/semester/4
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "timeManagement": {
+    "weekly": {
+      "academicHours": 28,
+      "trainingHours": 8,
+      "knowledgeUpdatingHours": 6,
+      "recreationHours": 10,
+      "personalAttentionHours": 6
+    },
+    "daily": {
+      "subjectReadingHours": 4,
+      "lightReadingHours": 1,
+      "browsingHours": 2,
+      "physicalSportsHours": 1
+    }
+  },
+  "classroomRoutine": {
+    "CS8401": { "attendance": 5, "attentiveness": 5, "takingNotes": 4, "interaction": 5, "taskCompletion": 5 },
+    "CS8402": { "attendance": 5, "attentiveness": 5, "takingNotes": 5, "interaction": 5, "taskCompletion": 5 }
+  },
+  "laboratoryRoutine": {
+    "CS8461": { "performingExperiments": 5, "observation": 5, "recordCompletion": 5 }
+  },
+  "examinationPrep": {
+    "monthlyTests": { "attendance": "100%", "seriousness": "High", "preparations": "Thorough" },
+    "universityExams": { "previousYearQuestions": true, "questionBank": true, "groupStudy": true }
+  },
+  "mentorSuggestions": {
+    "timeManagementSuggestion": "Well balanced schedule; maintain weekend coding focus",
+    "generalSuggestions": "Encouraged to participate in external hackathons"
+  }
+}
+
+### 4.7 Mentor logs 1-on-1 Mentoring Session with 10-point trait scores (Page C Bottom)
+POST {{baseUrl}}/mentoring/sessions/111422104001/semester/4
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "sessionNumber": 1,
+  "date": "2024-03-12",
+  "asPerson": 9,
+  "studies": 9,
+  "behaviour": 10,
+  "characterAndContact": 10,
+  "knowledge": 9,
+  "remarks": "Exceptionally disciplined and motivated student with clear technical goals."
+}
+
+### 4.8 View 1-on-1 Sessions for Semester 4
+GET {{baseUrl}}/mentoring/sessions/111422104001/semester/4
+Authorization: Bearer {{studentToken}}
+
+### 4.9 Mentor updates Page D Semester Review & Analysis Sheet
+PUT {{baseUrl}}/mentoring/review/111422104001/semester/4
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "overallRemarks": "Aravind Swaminathan is an exemplary student with top-tier academic commitment.",
+  "disciplinaryIssues": "Nil",
+  "requiresLeadershipFollowup": false,
+  "strengths": {
+    "attendance": "Consistently above 95%",
+    "discipline": "Courteous and punctual in all academic routines",
+    "academic": "Top 3% percentile in internal assessments",
+    "coCurricular": "Active participant in tech club and zonal table tennis"
+  },
+  "weaknesses": {
+    "academic": "Requires slight reinforcement on theoretical automata proofs"
+  },
+  "improvementsObserved": {
+    "attendance": "Maintained distinction-level attendance",
+    "studies": "Improved problem solving speed in laboratory experiments",
+    "coCurricular": "Zonal table tennis runner up"
+  }
+}
+
+### 4.10 4-Tier Leadership Sign-off Chain (Page D)
+### Step 1: Mentor Sign-off
+POST {{baseUrl}}/mentoring/review/111422104001/semester/4/sign-off
+Authorization: Bearer {{mentorToken}}
+
+### Step 2: Class Coordinator Sign-off
+POST {{baseUrl}}/mentoring/review/111422104001/semester/4/sign-off
+Authorization: Bearer {{coordToken}}
+
+### Step 3: HOD Sign-off
+POST {{baseUrl}}/mentoring/review/111422104001/semester/4/sign-off
+Authorization: Bearer {{hodToken}}
+
+### Step 4: Principal Sign-off
+POST {{baseUrl}}/mentoring/review/111422104001/semester/4/sign-off
+Authorization: Bearer {{principalToken}}
+
+
+###############################################################################
+# 5. END PROGRAM MODULE (/end-program)
+###############################################################################
+
+### 5.1 View 8-Semester summary, mini-projects, placements & exit contact (Page 35)
+GET {{baseUrl}}/end-program/111422104001
+Authorization: Bearer {{studentToken}}
+
+### 5.2 Mentor updates consolidated 8-semester performance & financials
+PUT {{baseUrl}}/end-program/summary/111422104001
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "finalCgpa": 8.68,
+  "totalCreditsEarned": 164,
+  "graduationClassification": "FIRST_CLASS_WITH_DISTINCTION",
+  "graduationStatus": "IN_PROGRESS",
+  "semesterWiseData": [
+    { "semester": 1, "year": 1, "sgpa": 8.25, "cgpa": 8.25, "attendancePercentage": 94.5, "feeReceipts": [{ "receiptNumber": "REC-001", "amount": 85000 }], "scholarships": [] },
+    { "semester": 2, "year": 1, "sgpa": 8.40, "cgpa": 8.32, "attendancePercentage": 96.0, "feeReceipts": [{ "receiptNumber": "REC-002", "amount": 85000 }], "scholarships": [{ "name": "Merit Scholarship", "amount": 20000 }] },
+    { "semester": 3, "year": 2, "sgpa": 8.30, "cgpa": 8.31, "attendancePercentage": 91.5, "feeReceipts": [{ "receiptNumber": "REC-003", "amount": 85000 }], "scholarships": [] },
+    { "semester": 4, "year": 2, "sgpa": 8.75, "cgpa": 8.42, "attendancePercentage": 95.0, "feeReceipts": [{ "receiptNumber": "REC-004", "amount": 85000 }], "scholarships": [] },
+    { "semester": 5, "year": 3, "sgpa": 8.60, "cgpa": 8.46, "attendancePercentage": 97.2, "feeReceipts": [{ "receiptNumber": "REC-005", "amount": 85000 }], "scholarships": [] },
+    { "semester": 6, "year": 3, "sgpa": 8.90, "cgpa": 8.53, "attendancePercentage": 98.0, "feeReceipts": [{ "receiptNumber": "REC-006", "amount": 85000 }], "scholarships": [] },
+    { "semester": 7, "year": 4, "sgpa": 9.10, "cgpa": 8.61, "attendancePercentage": 99.0, "feeReceipts": [{ "receiptNumber": "REC-007", "amount": 85000 }], "scholarships": [] },
+    { "semester": 8, "year": 4, "sgpa": 9.20, "cgpa": 8.68, "attendancePercentage": 100.0, "feeReceipts": [{ "receiptNumber": "REC-008", "amount": 85000 }], "scholarships": [] }
+  ]
+}
+
+### 5.3 Student / Mentor records Mini-Project / Outside Presentation / Recognition
+POST {{baseUrl}}/end-program/projects/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "year": 4,
+  "semester": 7,
+  "title": "IoT-Based Smart Energy Monitoring & Grid Analytics",
+  "guideName": "Dr. Ramesh Kumar",
+  "presentationOutside": "IEEE International Conference on Smart Grids 2025",
+  "recognitionReceived": "Best Innovation Paper Award",
+  "institutionalSupport": "Seed Grant of Rs. 25,000 from Prathyusha R&D Cell"
+}
+
+### 5.4 Student / Mentor records Campus Placement / Career Milestone
+POST {{baseUrl}}/end-program/placements/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "year": 4,
+  "semester": 7,
+  "date": "2025-10-18",
+  "venue": "College Placement Cell Auditorium",
+  "companyName": "Zoho Corporation",
+  "role": "Software Development Engineer",
+  "packageLpa": 8.5,
+  "outcome": "PLACED"
+}
+
+### 5.5 Student / Parent updates Alumni Permanent Exit Contact
+PUT {{baseUrl}}/end-program/exit-contact/111422104001
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "exitAddress": "Plot No. 42, Annai Nagar, 3rd Cross Street",
+  "exitCity": "Tiruvallur",
+  "exitState": "Tamil Nadu",
+  "exitPincode": "602025",
+  "exitMobile": "+91 98401 23456",
+  "exitEmail": "aravind.swe@gmail.com",
+  "higherStudiesDetails": {
+    "exam": "GATE 2025",
+    "score": "685",
+    "university": "IIT Madras",
+    "course": "M.Tech Computer Science"
+  }
+}
+
+### 5.6 Mentor Program Exit Sign-Off
+POST {{baseUrl}}/end-program/sign-off/111422104001
+Authorization: Bearer {{mentorToken}}
+Content-Type: application/json
+
+{
+  "role": "MENTOR",
+  "remarks": "Exemplary academic and ethical character throughout all 4 years. Strong technical acumen."
+}
+
+### 5.7 HOD Program Exit Sign-Off (automatically marks status GRADUATED)
+POST {{baseUrl}}/end-program/sign-off/111422104001
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+
+{
+  "role": "HOD",
+  "remarks": "Degree clearance recommended with First Class with Distinction."
+}
+

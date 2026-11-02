@@ -1,0 +1,447 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  FACULTY
+  MENTOR
+  CLASS_COORDINATOR
+  HOD
+  PRINCIPAL
+  ADMIN
+  PARENT
+}
+
+enum AdmissionType {
+  COUNSELING
+  MANAGEMENT
+}
+
+enum SubjectType {
+  THEORY
+  PRACTICAL
+  INTEGRATED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(STUDENT)
+  department   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coordinatedClasses Class[]               @relation("ClassCoordinator")
+  taughtSubjects     SubjectClassMapping[] @relation("TeachingFaculty")
+  assignedMentees    MentorMenteeMapping[] @relation("MentorAssignments")
+  loggedSessions     MentoringSession[]    @relation("MentorSessions")
+
+  @@map("users")
+}
+
+model Student {
+  id              String         @id @default(uuid())
+  registerNumber  String         @unique
+  admissionNumber String         @unique
+  name            String
+  branch          String
+  batchStart      Int
+  batchEnd        Int
+  section         String
+  admissionType   AdmissionType  @default(COUNSELING)
+  lateralEntry    Boolean        @default(false)
+  studentPhotoUrl String?
+  fatherPhotoUrl  String?
+  motherPhotoUrl  String?
+  passoutPhotoUrl String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  personalDetails      StudentPersonalDetails?
+  familyDetails        StudentFamilyDetails?
+  academicHistory      StudentAcademicHistory?
+  ambitionAndProfile   StudentAmbitionAndProfile?
+  academicPerformances SemesterAcademicPerformance[]
+  menteeMappings       MentorMenteeMapping[]
+  mentoringActivities  SemesterMentoringActivity[]
+  mentoringCharts      SemesterMentoringChart[]
+  mentoringSessions    MentoringSession[]
+  mentorReviews        SemesterMentorReview[]
+  endProgramSummary    EndProgramSummary?
+
+  @@map("students")
+}
+
+model StudentPersonalDetails {
+  id              String   @id @default(uuid())
+  studentId       String   @unique
+  dob             DateTime?
+  age             Int?
+  sex             String?
+  state           String?
+  nationality     String?  @default("Indian")
+  religion        String?
+  community       String?
+  caste           String?
+  contactLandline String?
+  contactMobile   String?
+  email           String?
+  bloodGroup      String?
+  foodHabit       String?
+  motherTongue    String?
+  otherLanguages  Json?    @default("[]")
+  chronicIllness  String?
+  visionProblem   Boolean  @default(false)
+  siblings        Json?    @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_personal_details")
+}
+
+model StudentFamilyDetails {
+  id                         String   @id @default(uuid())
+  studentId                  String   @unique
+  fatherName                 String?
+  fatherEducation            String?
+  fatherOccupation           String?
+  fatherMobile               String?
+  fatherAnnualIncome         Float?
+  motherName                 String?
+  motherEducation            String?
+  motherOccupation           String?
+  motherMobile               String?
+  motherAnnualIncome         Float?
+  otherIncomeSource          String?
+  parentCommunicationAddress String?
+  studentPermanentAddress    String?
+  presentAddresses           Json?    @default("{}")
+  localGuardian              Json?    @default("{}")
+  undertakePartTimeJob       String?
+  scholarshipDetails         String?
+  otherFinancialAssistance   String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_family_details")
+}
+
+model StudentAcademicHistory {
+  id                  String   @id @default(uuid())
+  studentId           String   @unique
+  sslcSchoolName      String?
+  sslcBoard           String?
+  sslcMedium          String?
+  sslcMarks           Float?
+  sslcPercentage      Float?
+  sslcYearOfPassing   Int?
+  hscSchoolName       String?
+  hscBoard            String?
+  hscMathsMark        Float?
+  hscPhysicsMark      Float?
+  hscChemistryMark    Float?
+  hscBiologyOrCsMark  Float?
+  hscCutoff           Float?
+  hscPercentage       Float?
+  hscClass            String?
+  diplomaInstitution  String?
+  diplomaBranch       String?
+  diplomaPercentage   Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_academic_history")
+}
+
+model StudentAmbitionAndProfile {
+  id                         String   @id @default(uuid())
+  studentId                  String   @unique
+  personalAimOrGoal          String?
+  objectives                 String?
+  plansToAchieveAim          String?
+  careerOption               String?
+  preparationDetails         String?
+  extraCoaching              String?
+  collegeHelpRequired        String?
+  prizesAndAwards            String?
+  stayType                   String?
+  hostellerDetails           Json?    @default("{}")
+  dayscholarStayWith         String?
+  parentCommFrequencyStudent String?
+  parentCommFrequencyParent  String?
+  holidayAndWeekendRoutine   String?
+  outsideStayFellowMates     String?
+  strengthsAcademic          String?
+  strengthsGeneral           String?
+  weaknesses                 String?
+  likesBranch                Boolean? @default(true)
+  branchDislikeReason        String?
+  mathFundamentalsRating     String?
+  coreEngineeringRating      String?
+  capableRaisingQuestions    Boolean? @default(true)
+  sportsAndGames             Json?    @default("[]")
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_ambition_and_profile")
+}
+
+model Class {
+  id            String   @id @default(uuid())
+  department    String
+  year          Int      // 1 to 4
+  semester      Int      // 1 to 8
+  section       String   // A, B, C
+  academicYear  String   // e.g. "2024-2025"
+  coordinatorId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  coordinator     User?                         @relation("ClassCoordinator", fields: [coordinatorId], references: [id])
+  subjectMappings SubjectClassMapping[]
+  performances    SemesterAcademicPerformance[]
+
+  @@unique([department, academicYear, semester, section])
+  @@map("classes")
+}
+
+model Subject {
+  id         String      @id @default(uuid())
+  code       String      @unique // e.g. "CS8401"
+  name       String      // e.g. "Operating Systems"
+  department String      // e.g. "CSE"
+  credits    Int         // e.g. 3, 4
+  type       SubjectType @default(THEORY)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  classMappings SubjectClassMapping[]
+
+  @@map("subjects")
+}
+
+model SubjectClassMapping {
+  id        String   @id @default(uuid())
+  classId   String
+  subjectId String
+  facultyId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  faculty User?   @relation("TeachingFaculty", fields: [facultyId], references: [id])
+
+  @@unique([classId, subjectId])
+  @@map("subject_class_mappings")
+}
+
+model SemesterAcademicPerformance {
+  id                   String    @id @default(uuid())
+  studentId            String
+  classId              String?
+  semester             Int       // 1 to 8
+  year                 Int       // 1 to 4
+  workingDays          Int?
+  daysPresent          Int?
+  daysAbsent           Int?
+  leaveDays            Int?
+  medicalLeave         Int?
+  attendancePercentage Float?
+  gpa                  Float?
+  cgpa                 Float?
+  subjectMarks         Json?     @default("[]") // [{ subjectCode, subjectName, iat1, iat2, model, internalMark, univGrade, credits, result }]
+  arrearsTracking      Json?     @default("[]") // [{ subjectCode, subjectName, semesterOccurred, attempts: [{ examSession, grade, result }], cleared: boolean, clearanceDate }]
+  mentorRemarks        String?
+  studentSignedAt      DateTime?
+  parentSignedAt       DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class?  @relation(fields: [classId], references: [id])
+
+  @@unique([studentId, semester])
+  @@map("semester_academic_performance")
+}
+
+model MentorMenteeMapping {
+  id           String   @id @default(uuid())
+  mentorId     String
+  studentId    String
+  academicYear String   // e.g. "2024-2025"
+  semester     Int      // 1 to 8
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mentor  User    @relation("MentorAssignments", fields: [mentorId], references: [id])
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semester, academicYear])
+  @@map("mentor_mentee_mappings")
+}
+
+model SemesterMentoringActivity {
+  id                       String   @id @default(uuid())
+  studentId                String
+  semester                 Int
+  year                     Int
+  fieldOfInterest          String?
+  favoriteSubject          String?
+  favoriteSubjectReason    String?
+  favoriteTeacher          String?
+  favoriteTeacherReason    String?
+  easiestSubject           String?
+  easiestSubjectReason     String?
+  hardestSubject           String?
+  hardestSubjectReason     String?
+  subjectProblems          Json?    @default("[]")
+  specialCoachingRequired  String?
+  specialAttentionRequired String?
+  distractions             String?
+  laboratoryUnderstanding  Json?    @default("{}")
+  arrearsExplanation       String?
+  libraryDetails           Json?    @default("{}")
+  communicationEfforts     String?
+  improvedOverTime         String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semester])
+  @@map("semester_mentoring_activities")
+}
+
+model SemesterMentoringChart {
+  id                String   @id @default(uuid())
+  studentId         String
+  semester          Int
+  year              Int
+  timeManagement    Json?    @default("{}")
+  classroomRoutine  Json?    @default("{}")
+  laboratoryRoutine Json?    @default("{}")
+  examinationPrep   Json?    @default("{}")
+  otherActivities   Json?    @default("{}")
+  mentorSuggestions Json?    @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semester])
+  @@map("semester_mentoring_charts")
+}
+
+model MentoringSession {
+  id                  String    @id @default(uuid())
+  studentId           String
+  mentorId            String
+  semester            Int
+  sessionNumber       Int       // 1 to 5
+  date                DateTime
+  asPerson            Int       // 1 to 10
+  studies             Int       // 1 to 10
+  behaviour           Int       // 1 to 10
+  characterAndContact Int       // 1 to 10
+  knowledge           Int       // 1 to 10
+  total               Int       // sum out of 50
+  remarks             String?
+  studentSignature    Boolean   @default(false)
+  studentSignedAt     DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mentor  User    @relation("MentorSessions", fields: [mentorId], references: [id])
+
+  @@unique([studentId, semester, sessionNumber])
+  @@map("mentoring_sessions")
+}
+
+model SemesterMentorReview {
+  id                         String    @id @default(uuid())
+  studentId                  String
+  semester                   Int
+  year                       Int
+  overallRemarks             String?
+  disciplinaryIssues         String?
+  requiresLeadershipFollowup Boolean   @default(false)
+  leadershipFollowupTarget   String?   // HOD, PRINCIPAL, MANAGEMENT
+  leadershipFollowupDetails  String?
+  strengths                  Json?     @default("{}")
+  weaknesses                 Json?     @default("{}")
+  improvementsObserved       Json?     @default("{}")
+  mentorSignedAt             DateTime?
+  coordinatorSignedAt        DateTime?
+  hodSignedAt                DateTime?
+  principalSignedAt          DateTime?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semester])
+  @@map("semester_mentor_reviews")
+}
+
+model EndProgramSummary {
+  id                       String    @id @default(uuid())
+  studentId                String    @unique
+  department               String
+  batch                    String    // e.g. "2021-2025"
+  finalCgpa                Float?
+  totalCreditsEarned       Int?
+  graduationClassification String?   // "FIRST_CLASS_DISTINCTION", "FIRST_CLASS", "SECOND_CLASS"
+  graduationStatus         String    @default("IN_PROGRESS") // "IN_PROGRESS", "GRADUATED", "DISCONTINUED"
+
+  // Page 35 - 8 Semester Consolidated Summary
+  // Array of: { semester, year, sgpa, cgpa, attendancePercentage, feeReceipts: [...], scholarships: [...], detention: {...}, semDrop: {...} }
+  semesterWiseData         Json?     @default("[]")
+
+  // Page 35 - Mini Projects Tracking
+  // Array of: { id, year, semester, title, guideId, guideName, presentationOutside, recognitionReceived, institutionalSupport }
+  miniProjects             Json?     @default("[]")
+
+  // Page 35 - Campus Placements Tracking
+  // Array of: { id, year, semester, date, venue, companyName, role, packageLpa, outcome }
+  placements               Json?     @default("[]")
+
+  // Page 35 - Exit Contact & Alumni Details
+  exitAddress              String?
+  exitCity                 String?
+  exitState                String?
+  exitPincode              String?
+  exitMobile               String?
+  exitEmail                String?
+  higherStudiesDetails     Json?     @default("{}") // { exam, score, university, course }
+
+  // Graduation Clearances / Signatures
+  mentorRemarks            String?
+  mentorSignedAt           DateTime?
+  hodRemarks               String?
+  hodSignedAt              DateTime?
+
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("end_program_summaries")
+}

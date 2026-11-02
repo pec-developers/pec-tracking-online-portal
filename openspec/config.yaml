@@ -2,17 +2,30 @@ schema: spec-driven
 
 # Project context
 context: |
-  Tech stack: TypeScript, React, Vite, TailwindCSS
-  Frontend Architecture: Multi-page micro-frontends (landing, login, student, parent, faculty)
-  Deployment Platform: Vercel Multi-Project Setup (migrated from AWS S3 + CloudFront Jenkins pipeline)
-  Target URLs:
-    - landing: pectop.vercel.app (outDir: dist/landing)
-    - login: auth-pectop.vercel.app (outDir: dist/login)
-    - student: student-pectop.vercel.app (outDir: dist/student)
-    - parent: parent-pectop.vercel.app (outDir: dist/parent)
-    - faculty/mentor: faculty-pectop.vercel.app (outDir: dist/faculty)
-  Vercel Config: app/frontend/vercel.json (SPA fallback routing)
-  CI/CD: .github/workflows/deploy-vercel.yml
+  Architecture: Simplified single-domain fullstack portal
+  Backend: NestJS (TypeScript, ESM) located in app/backend
+    - Database: PostgreSQL (Prisma ORM)
+    - Auth: JWT with RBAC (ADMIN, PRINCIPAL, HOD, CLASS_COORDINATOR, MENTOR, FACULTY, STUDENT, PARENT)
+    - Completed Modules:
+      - AuthModule (clean JWT auth & role guards)
+      - StudentModule (Cover, Inside Cover, Pages 1 & 2)
+      - AcademicModule (Page C Top Half, classes, subjects, marks, attendance, university results, arrears)
+      - MentoringModule (Allocation, Pages A, B, C Counseling Sessions, Page D 4-tier sign-off chain)
+      - EndProgramModule (Page 35 8-semester summary, mini-projects, placements, exit contacts, graduation sign-off)
+  Frontend: React 19, TypeScript, Vite 8, Zustand 5, Tailwind CSS v4 (@tailwindcss/vite) located in app/frontend
+    - Completed Views:
+      - 1-click test role authentication switcher across all 8 roles
+      - Role Dashboards (Mentor mentee roster, Faculty mark entry grid, Leadership approval queues)
+      - Digital Booklet Viewer:
+        - Cover & Inside Cover (Student & Parents photos, personal details)
+        - Page 1 (Family socio-economic profile, 10th & 12th academic history)
+        - Page 2 (Career ambition, living style, SWOT analysis, sports)
+        - Semester Tracker (Sem 1-8): Page A reflections, Page B routine chart, Page C academic scorecard & 5 counseling sessions, Page D 4-tier sign-off chain
+        - Page 35 Program Exit (8-semester summary, mini-projects, placements, alumni contact, graduation clearance)
+  Legacy / Backup:
+    - Previous multi-service Java Spring Boot backend backed up in app/backend-backup
+    - Previous multi-domain micro-frontend Vite setup backed up in app/frontend-backup
+  Deployment Target: Single domain deployment (e.g., Vercel / single web server proxying /api to NestJS)
 
 # Per-artifact rules
 rules:
@@ -21,5 +34,3 @@ rules:
     - Always include a "Non-goals" section
   tasks:
     - Break tasks into chunks of max 2 hours
-
-

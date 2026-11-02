@@ -1,11 +1,55 @@
-backend/student-general-profile-service/HELP.md
+# Environments and credentials
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Build Outputs
+dist/
+dist-ssr/
+build/
 target/
+.output/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Database & Storage
+postgres_data/
+
+# Knowledge Graph & Local Generated Tool Artifacts
+graphify-out/
+*.tsbuildinfo
+
+# IDE & OS Files
+.DS_Store
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Maven / Java (Legacy services & tooling)
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-*.env
-
-### STS ###
 .apt_generated
 .classpath
 .factorypath
@@ -14,49 +58,14 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Gemini
+# Gemini Antigravity
 .gemini/*
 
-postgres_data/
-postman/
+# Misc
+img-ref/
